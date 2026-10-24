@@ -1,0 +1,155 @@
+<Window x:Class="SubReel.Launcher.App.Views.AuthWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Аккаунт · SubReel" Width="900" Height="720" MinWidth="760" MinHeight="640"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" Background="#101119" Foreground="#F4F2FB">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Panel" Color="#191A27"/>
+        <SolidColorBrush x:Key="PanelRaised" Color="#202132"/>
+        <SolidColorBrush x:Key="Line" Color="#34354A"/>
+        <SolidColorBrush x:Key="Muted" Color="#A8A6BC"/>
+        <SolidColorBrush x:Key="Accent" Color="#9A87FF"/>
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="40"/><Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="14"/><Setter Property="Background" Value="#11121B"/>
+            <Setter Property="Foreground" Value="#F4F2FB"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="CaretBrush" Value="White"/><Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Height" Value="40"/><Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="14"/><Setter Property="Background" Value="#11121B"/>
+            <Setter Property="Foreground" Value="#F4F2FB"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Height" Value="40"/><Setter Property="Padding" Value="14,0"/>
+            <Setter Property="Foreground" Value="#F4F2FB"/><Setter Property="Background" Value="{StaticResource PanelRaised}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Line}"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="#DAD7E9"/><Setter Property="Padding" Value="18,12"/>
+            <Setter Property="FontSize" Value="13"/><Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
+                <Border x:Name="TabBorder" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0,0,0,2" CornerRadius="7,7,0,0">
+                    <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabBorder" Property="BorderBrush" Value="{StaticResource Accent}"/><Setter TargetName="TabBorder" Property="Background" Value="#201E32"/><Setter Property="Foreground" Value="White"/></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TabBorder" Property="Background" Value="#242438"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="26">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="0,0,0,22">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="SUBREEL  /  ACCOUNT CENTER" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
+                <TextBlock Text="Аккаунт и безопасность" FontSize="29" FontWeight="SemiBold" Margin="0,7,0,5"/>
+                <TextBlock Text="Управляй профилем SubReel и Minecraft отдельно — привязка не передаёт игровые токены." Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Border Grid.Column="1" Width="58" Height="58" CornerRadius="18" Background="#29243F" BorderBrush="#554A7B" BorderThickness="1" VerticalAlignment="Center">
+                <TextBlock Text="SR" FontSize="20" FontWeight="Black" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1" Background="#211F32" BorderBrush="#4D426E" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,18">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Border Width="38" Height="38" CornerRadius="12" Background="#332C4D" Margin="0,0,12,0">
+                    <TextBlock Text="✓" FontSize="20" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Две независимые учётные записи" FontWeight="SemiBold"/>
+                    <TextBlock Text="SubReel отвечает за профиль платформы; Microsoft — за лицензию и запуск Minecraft Java." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="2" Content="Обновить" Width="100" Click="Refresh_Click" Margin="12,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <TabControl Grid.Row="2" Background="Transparent" BorderThickness="0" Padding="0" SelectedIndex="0">
+            <TabItem Header="Профиль SubReel">
+                <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="0,12,12,12" Padding="24" Margin="0,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                            <Border Width="46" Height="46" CornerRadius="14" Background="#2A2540" Margin="0,0,13,0"><TextBlock Text="@" FontSize="25" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                            <StackPanel VerticalAlignment="Center"><TextBlock Text="Аккаунт SubReel" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="Вход, регистрация и сессия платформы" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel>
+                        </StackPanel>
+                        <Grid x:Name="AuthCredentialsGrid" Grid.Row="1" Margin="0,0,0,13">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Text="EMAIL" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/><TextBox x:Name="EmailBox"/></StackPanel>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0"><TextBlock Text="ПАРОЛЬ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/><PasswordBox x:Name="PasswordBox"/></StackPanel>
+                        </Grid>
+                        <TextBlock x:Name="AuthHintText" Grid.Row="2" Text="Для регистрации используй действующий email. Если в Supabase включено подтверждение почты, заверши его по письму перед входом." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Grid x:Name="AuthActionsGrid" Grid.Row="3">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Button x:Name="SignInButton" Content="Войти" Background="{StaticResource Accent}" Foreground="#11111A" BorderThickness="0" Click="SignIn_Click" Margin="0,0,6,0"/>
+                            <Button x:Name="SignUpButton" Grid.Column="1" Content="Создать аккаунт" Click="SignUp_Click" Margin="6,0"/>
+                            <Button x:Name="SignOutButton" Grid.Column="2" Content="Выйти" Click="SignOut_Click" IsEnabled="False" Margin="6,0,0,0"/>
+                        </Grid>
+                        <Border Grid.Row="4" Background="#14151F" BorderBrush="#2C2D40" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,20,0,0" VerticalAlignment="Top">
+                            <StackPanel><TextBlock x:Name="PlatformStatusTitle" Text="СОСТОЯНИЕ АККАУНТА" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Accent}"/><TextBlock x:Name="PlatformStatusDetails" Text="Выполни вход, чтобы привязать игровой профиль." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </TabItem>
+            <TabItem Header="Minecraft Java">
+                <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="0,12,12,12" Padding="24">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
+                            <Border Width="46" Height="46" CornerRadius="14" Background="#20372F" Margin="0,0,13,0"><TextBlock Text="M" FontSize="24" FontWeight="Bold" Foreground="#76D8A6" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                            <StackPanel VerticalAlignment="Center"><TextBlock Text="Игровой профиль" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="Для запуска и проверки Minecraft Java Edition" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel>
+                        </StackPanel>
+                        <TextBlock Grid.Row="1" Text="ВЫБЕРИ ИГРОВОЙ АККАУНТ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/>
+                        <ComboBox x:Name="GameAccountBox" Grid.Row="2" Height="42" DisplayMemberPath="Username" SelectionChanged="GameAccountBox_SelectionChanged" Background="#11121B" Foreground="#F4F2FB" BorderBrush="{StaticResource Line}" Padding="10,7"/>
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button x:Name="MicrosoftButton" Content="Войти через Microsoft" Click="Microsoft_Click" Background="#2D2C40" Margin="0,0,8,0"/>
+                            <Button x:Name="LicenseCheckButton" Content="Проверить лицензию" Click="LicenseCheck_Click" Margin="0,0,8,0"/>
+                            <Button x:Name="BuyMinecraftButton" Content="Купить Minecraft Java" Click="BuyMinecraft_Click" Margin="0,0,8,0"/>
+                            <Button x:Name="OfflineButton" Content="Добавить офлайн" Click="Offline_Click"/>
+                        </StackPanel>
+                        <ScrollViewer Grid.Row="4" Margin="0,18,0,0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <Border x:Name="LicenseStatusBorder" Background="#222331" BorderBrush="#48495B" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,0,14">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Border x:Name="LicenseStatusIconBackground" Width="48" Height="48" CornerRadius="14" Background="#343544" VerticalAlignment="Top" Margin="0,0,13,0">
+                                            <TextBlock x:Name="LicenseStatusIcon" Text="?" FontSize="25" FontWeight="Bold" Foreground="#C5C5D2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="ЛИЦЕНЗИЯ MINECRAFT JAVA" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Muted}"/>
+                                            <TextBlock x:Name="LicenseStatusTitle" Text="Ещё не проверена" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0" Foreground="#F4F2FB"/>
+                                            <TextBlock x:Name="LicenseStatusDetails" Text="Войди через Microsoft и проверь доступ к Minecraft Services." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <Border Background="#14151F" BorderBrush="#2C2D40" BorderThickness="1" CornerRadius="10" Padding="16">
+                                    <StackPanel>
+                                        <TextBlock Text="ИГРОВОЙ ПРОФИЛЬ И ПРИВЯЗКА" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
+                                        <TextBlock x:Name="GameProfileText" Text="Игровой профиль не выбран." Foreground="#E4E1F0" TextWrapping="Wrap" Margin="0,8,0,14"/>
+                                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                            <Button x:Name="LinkButton" Content="Привязать профиль" Click="Link_Click" Background="{StaticResource Accent}" Foreground="#11111A" BorderThickness="0" Margin="0,0,5,0"/>
+                                            <Button x:Name="UnlinkButton" Grid.Column="1" Content="Отвязать профиль" Click="Unlink_Click" Margin="5,0,0,0" IsEnabled="False"/>
+                                        </Grid>
+                                        <TextBlock Text="Привязывается только подтверждённый Microsoft-профиль. Офлайн-аккаунт не подтверждает лицензию. В Supabase сохраняются только UUID и имя — игровые токены не отправляются." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </TabItem>
+        </TabControl>
+
+        <Grid Grid.Row="3" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" Text="Готово к работе." Foreground="{StaticResource Muted}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="2,0,18,0"/>
+            <Button Grid.Column="1" Content="Закрыть" Width="110" Click="Close_Click"/>
+        </Grid>
+    </Grid>
+</Window>

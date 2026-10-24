@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SubReel.Launcher.Abstractions": {
+      "commandName": "Project"
+    },
+    "Профиль 1": {
+      "commandName": "Executable"
+    }
+  }
+}

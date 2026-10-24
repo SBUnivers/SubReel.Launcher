@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SubReel.Launcher.Abstractions/SubReel.Launcher.Abstractions.csproj" />
+    <Project Path="src/SubReel.Launcher.App/SubReel.Launcher.App.csproj" />
+    <Project Path="src/SubReel.Launcher.Auth/SubReel.Launcher.Auth.csproj" />
+    <Project Path="src/SubReel.Launcher.Core/SubReel.Launcher.Core.csproj" />
+    <Project Path="src/SubReel.Launcher.Infrastructure/SubReel.Launcher.Infrastructure.csproj" />
+  </Folder>
+</Solution>

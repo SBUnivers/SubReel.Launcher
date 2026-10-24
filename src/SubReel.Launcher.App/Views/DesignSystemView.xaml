@@ -1,0 +1,49 @@
+<UserControl x:Class="SubReel.Launcher.App.Views.DesignSystemView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:motion="clr-namespace:SubReel.Launcher.App.DesignSystem">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28">
+            <TextBlock Text="Дизайн-система" FontSize="30" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+            <TextBlock Text="Витрина компонентов темы SubReel. Изменения акцента сохраняются локально." Foreground="{DynamicResource TextSecondary}" Margin="0,6,0,24"/>
+            <Border Style="{StaticResource CardStyle}" MaxWidth="900" HorizontalAlignment="Left" motion:MotionBehaviors.FadeIn="True">
+                <StackPanel>
+                    <TextBlock Text="Акцентный цвет" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,24">
+                        <Button Content="Фиолетовый" Command="{Binding UseVioletCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                        <Button Content="Голубой" Command="{Binding UseCyanCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                        <Button Content="Янтарный" Command="{Binding UseAmberCommand}" Style="{StaticResource SecondaryButton}"/>
+                        <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AccentBrush}" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="Кнопки и состояния" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                    <WrapPanel Margin="0,12,0,24">
+                        <Button Content="Основная" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"/>
+                        <Button Content="Вторичная" Style="{StaticResource SecondaryButton}" Margin="0,0,8,8"/>
+                        <Button Content="Отключена" IsEnabled="False" Margin="0,0,8,8"/>
+                        <Button Content="⌕" ToolTip="Иконка" Style="{StaticResource IconButton}" Margin="0,0,8,8"/>
+                        <ToggleButton Content="Vanilla" Style="{StaticResource ChipToggle}" IsChecked="True" Margin="0,0,8,8"/>
+                        <ToggleButton Content="Fabric" Style="{StaticResource ChipToggle}" Margin="0,0,8,8"/>
+                        <ToggleButton Content="NeoForge" Style="{StaticResource ChipToggle}" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <TextBlock Text="Формы и параметры" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                    <Grid Margin="0,12,0,24">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding SampleText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0" ToolTip="Поле ввода"/>
+                        <ComboBox Grid.Column="1" SelectedIndex="0" Margin="5,0"><ComboBoxItem Content="Minecraft 1.21.1"/><ComboBoxItem Content="Minecraft 1.20.1"/></ComboBox>
+                        <CheckBox Grid.Column="2" Content="Включить параметр" IsChecked="True" Margin="12,8"/>
+                    </Grid>
+                    <TextBlock Text="Память: 4096 МБ" Foreground="{DynamicResource TextSecondary}"/>
+                    <Slider Minimum="512" Maximum="16384" Value="4096"/>
+                    <ProgressBar Value="{Binding SampleProgress}" Maximum="100" Margin="0,8,0,24"/>
+                    <TextBlock Text="Переключения и анимации" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                    <CheckBox Content="Меньше анимаций" IsChecked="{Binding ReducedMotion, UpdateSourceTrigger=PropertyChanged}" Margin="0,12,0,0"/>
+                    <ItemsControl ItemsSource="{Binding SampleItems}" motion:MotionBehaviors.Stagger="True" Margin="0,12,0,0">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate><DataTemplate><Border Style="{StaticResource CardStyle}" Width="180" Margin="0,0,10,10" motion:MotionBehaviors.HoverLift="True"><StackPanel><TextBlock Text="{Binding}" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/><TextBlock Text="Наведи курсор" Foreground="{DynamicResource TextSecondary}" Margin="0,6,0,0"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Border Height="12" Background="{DynamicResource CardRaisedBackground}" CornerRadius="6" motion:MotionBehaviors.Shimmer="True" Margin="0,12,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

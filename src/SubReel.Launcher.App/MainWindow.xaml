@@ -1,0 +1,101 @@
+<Window x:Class="SubReel.Launcher.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:design="clr-namespace:SubReel.Launcher.App.DesignSystem"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="SubReel Launcher" Width="1180" Height="760" MinWidth="900" MinHeight="620"
+        WindowStartupLocation="CenterScreen" Background="{DynamicResource AppBackground}">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="62" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+    <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="78"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="#D910111A" BorderBrush="#1FFFFFFF" BorderThickness="0,0,1,0">
+            <DockPanel Margin="10,14">
+                <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center">
+                    <Border Width="42" Height="42" CornerRadius="14" Background="{DynamicResource AccentBrush}">
+                        <TextBlock Text="S" FontSize="23" FontWeight="Black" Foreground="#100D19" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,16,0,0">
+                    <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" ToolTip="Лаунчер запущен"/>
+                    <Button Width="44" Height="44" Padding="0" Margin="0,16,0,0" Background="{DynamicResource CardRaisedBackground}" BorderBrush="#36FFFFFF"
+                            Click="AccountMenu_Click" ToolTip="{Binding AccountText}">
+                        <Grid Width="44" Height="44">
+                            <TextBlock Text="◉" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image Source="{Binding ActiveAccount.SkinPath, Converter={StaticResource MinecraftFaceConverter}}" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                        </Grid>
+                        <Button.ContextMenu>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <MenuItem Header="Добавить Microsoft" Command="{Binding AddMicrosoftAccountCommand}" IsEnabled="{Binding CanSignInMicrosoft}"/>
+                                <MenuItem Header="Добавить офлайн" Command="{Binding AddOfflineAccountCommand}"/>
+                                <Separator/>
+                                <MenuItem Header="Выбрать аккаунт" ItemsSource="{Binding Accounts}">
+                                    <MenuItem.ItemContainerStyle>
+                                        <Style TargetType="MenuItem">
+                                            <Setter Property="Header" Value="{Binding Username}"/>
+                                            <Setter Property="Command" Value="{Binding DataContext.ActivateAccountCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                                            <Setter Property="CommandParameter" Value="{Binding}"/>
+                                        </Style>
+                                    </MenuItem.ItemContainerStyle>
+                                </MenuItem>
+                                <MenuItem Header="Удалить аккаунт" ItemsSource="{Binding Accounts}">
+                                    <MenuItem.ItemContainerStyle>
+                                        <Style TargetType="MenuItem">
+                                            <Setter Property="Header" Value="{Binding Username}"/>
+                                            <Setter Property="Command" Value="{Binding DataContext.RemoveAccountCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                                            <Setter Property="CommandParameter" Value="{Binding}"/>
+                                        </Style>
+                                    </MenuItem.ItemContainerStyle>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Выйти из активного аккаунта" Command="{Binding SignOutCommand}"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <TextBlock Text="0.1.0" FontSize="9" Foreground="#666476" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding NavigationItems}" Margin="0,28,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding Key}" Width="48" Height="46" Padding="0" Margin="0,3"
+                                    Background="Transparent" BorderThickness="0" ToolTip="{Binding Title}">
+                                <TextBlock Text="{Binding Icon}" FontSize="21" Foreground="#C8C3D5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Button.Template><ControlTemplate TargetType="Button">
+                                    <Border x:Name="NavIcon" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="14">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavIcon" Property="Background" Value="{DynamicResource CardRaisedBackground}"/><Setter TargetName="NavIcon" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="NavIcon" Property="BorderThickness" Value="1"/></Trigger>
+                                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="NavIcon" Property="Opacity" Value="0.78"/></Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate></Button.Template>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/><RowDefinition Height="30"/></Grid.RowDefinitions>
+            <Border Grid.Row="0" BorderBrush="#18FFFFFF" BorderThickness="0,0,0,1" Background="#18000000">
+                <DockPanel Margin="26,0" LastChildFill="False">
+                    <TextBlock Text="{Binding PageTitle}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding AccountText}" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                        <Button Content="—" Click="Minimize_Click" Style="{StaticResource IconButton}" Margin="16,0,4,0" ToolTip="Свернуть"/>
+                        <Button Content="□" Click="Maximize_Click" Style="{StaticResource IconButton}" Margin="0,0,4,0" ToolTip="Развернуть"/>
+                        <Button Content="×" Click="Close_Click" Style="{StaticResource IconButton}" ToolTip="Закрыть"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            <design:PageTransitionControl Grid.Row="1" Content="{Binding CurrentViewModel}"/>
+            <Border Grid.Row="2" Background="#15141D" BorderBrush="#18FFFFFF" BorderThickness="0,1,0,0">
+                <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextSecondary}" FontSize="10" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
