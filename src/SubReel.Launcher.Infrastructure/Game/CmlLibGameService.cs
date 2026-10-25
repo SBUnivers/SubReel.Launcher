@@ -5,6 +5,7 @@ using CmlLib.Core.Auth;
 using CmlLib.Core.Installers;
 using CmlLib.Core.ProcessBuilder;
 using CmlLib.Core.ModLoaders.FabricMC;
+using CmlLib.Core.ModLoaders.QuiltMC;
 using CmlLib.Core.Installer.Forge;
 using CmlLib.Core.Installer.NeoForge;
 using Microsoft.Extensions.Logging;
@@ -143,6 +144,12 @@ public sealed class CmlLibGameService(IAppPaths paths, IHttpClientFactory httpCl
                 versionName = string.IsNullOrWhiteSpace(loaderVersion)
                     ? await fabric.Install(request.MinecraftVersion, launcher.MinecraftPath)
                     : await fabric.Install(request.MinecraftVersion, loaderVersion, launcher.MinecraftPath);
+                break;
+            case "QUILT":
+                var quilt = new QuiltInstaller(httpClient);
+                versionName = string.IsNullOrWhiteSpace(loaderVersion)
+                    ? await quilt.Install(request.MinecraftVersion, launcher.MinecraftPath)
+                    : await quilt.Install(request.MinecraftVersion, loaderVersion, launcher.MinecraftPath);
                 break;
             case "FORGE":
                 var forge = new ForgeInstaller(launcher);

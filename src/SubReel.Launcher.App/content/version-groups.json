@@ -1,0 +1,37 @@
+{
+  "26": {
+    "title": "Minecraft 26",
+    "subtitle": "НОВОЕ ПОКОЛЕНИЕ МИРА",
+    "art": null,
+    "accent": "#8875FF",
+    "order": 0
+  },
+  "1.21": {
+    "title": "Tricky Trials",
+    "subtitle": "ИСПЫТАНИЯ ЖДУТ",
+    "art": null,
+    "accent": "#A78BFA",
+    "order": 1
+  },
+  "1.20": {
+    "title": "Trails & Tales",
+    "subtitle": "ИСТОРИИ И ПУТЕШЕСТВИЯ",
+    "art": null,
+    "accent": "#F7B955",
+    "order": 2
+  },
+  "1.19": {
+    "title": "The Wild Update",
+    "subtitle": "ДИКАЯ ПРИРОДА",
+    "art": null,
+    "accent": "#78C897",
+    "order": 3
+  },
+  "1.18": {
+    "title": "Caves & Cliffs",
+    "subtitle": "МИР СТАЛ ГЛУБЖЕ",
+    "art": null,
+    "accent": "#6FC8EF",
+    "order": 4
+  }
+}

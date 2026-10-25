@@ -17,8 +17,9 @@
                     <Border x:Name="Card" CornerRadius="24" BorderThickness="1" BorderBrush="#2AFFFFFF" ClipToBounds="True" RenderTransformOrigin="0.5,0.5">
                         <Border.RenderTransform><ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/></Border.RenderTransform>
                         <Grid>
+                            <Image Source="{Binding ArtUri}" Stretch="UniformToFill" Opacity="0.55" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
                             <Border Background="{DynamicResource AccentBrush}" Opacity="0.24"/>
-                            <Rectangle Fill="#20140E18"/>
+                            <Rectangle><Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#100A0D16" Offset="0"/><GradientStop Color="#B80A0D16" Offset="1"/></LinearGradientBrush></Rectangle.Fill></Rectangle>
                             <Ellipse Width="210" Height="210" Fill="#22FFFFFF" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-55,-75,0"/>
                             <Ellipse Width="160" Height="160" Fill="#18FFFFFF" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-30,-50"/>
                             <StackPanel VerticalAlignment="Bottom" Margin="22">
@@ -67,7 +68,7 @@
             <Setter Property="Padding" Value="14,8"/><Setter Property="Margin" Value="0,0,8,0"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
                 <Border x:Name="Chip" Background="{TemplateBinding Background}" BorderBrush="#282633" BorderThickness="1" CornerRadius="18" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
-                <ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource CardRaisedBackground}"/><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter Property="Foreground" Value="White"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger></ControlTemplate.Triggers>
+                <ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource CardRaisedBackground}"/><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter Property="Foreground" Value="White"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chip" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
     </UserControl.Resources>
@@ -120,10 +121,12 @@
                 <StackPanel Grid.Column="1" Margin="12,24,24,24" VerticalAlignment="Center">
                     <TextBlock Text="ЗАПУСТИТЬ" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                     <TextBlock Text="Выбери загрузчик" FontSize="21" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,5,0,18"/>
-                    <ListBox ItemsSource="{Binding Loaders}" SelectedItem="{Binding SelectedLoader, Mode=TwoWay}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" SelectionMode="Single">
+                    <ListBox ItemsSource="{Binding LoaderOptions}" SelectedValuePath="Id" SelectedValue="{Binding SelectedLoader, Mode=TwoWay}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" SelectionMode="Single">
                         <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
-                        <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource LoaderChip}"/></ListBox.ItemContainerStyle>
+                        <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource LoaderChip}"><Setter Property="IsEnabled" Value="{Binding IsAvailable}"/><Setter Property="ToolTip" Value="{Binding AvailabilityMessage}"/></Style></ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Name}"/><TextBlock Text="{Binding Version}" Foreground="{DynamicResource TextSecondary}" FontSize="9" Margin="6,1,0,0"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
+                    <TextBlock Text="{Binding LoaderCatalogStatus}" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding SelectedVersionSummary}" Foreground="{StaticResource TextSecondary}" Margin="0,20,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Grid>

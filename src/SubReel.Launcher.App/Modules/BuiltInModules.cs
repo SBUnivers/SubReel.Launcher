@@ -24,8 +24,8 @@ public sealed class InstancesModule : ILauncherModule
 public sealed class ModsModule : ILauncherModule
 {
     public string Id => "mods";
-    public void ConfigureServices(IServiceCollection services) { }
-    public IEnumerable<NavItem> GetNavItems() => [new("mods", "Моды", "✧", "Установка, обновление и управление модификациями.")];
+    public void ConfigureServices(IServiceCollection services) => services.AddTransient<ModsCatalogViewModel>();
+    public IEnumerable<NavItem> GetNavItems() => [new("mods", "Каталог", "✧", "Поиск модпаков в каталогах.", typeof(ModsCatalogViewModel))];
 }
 
 public sealed class SettingsModule : ILauncherModule

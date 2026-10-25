@@ -11,11 +11,28 @@
                 <ResourceDictionary Source="Resources/Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
             <DataTemplate DataType="{x:Type vm:SectionViewModel}">
                 <views:SectionView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:HomeViewModel}">
+                <views:HomeView/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:InstancesViewModel}">
                 <views:InstancesView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ModsCatalogViewModel}">
+                <views:ModsCatalogView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:NewsViewModel}">
+                <views:NewsView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+                <views:SettingsView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:DesignSystemViewModel}">
+                <views:DesignSystemView/>
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

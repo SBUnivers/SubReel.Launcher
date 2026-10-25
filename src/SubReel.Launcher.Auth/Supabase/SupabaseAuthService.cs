@@ -91,8 +91,15 @@ public sealed class SupabaseAuthService : ISubReelAuthService
             if (stored is null) return new(false, false, "Сохранённой сессии нет.");
             if (stored.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1))
             {
-                _session = stored;
-                return new(true, false, "Сессия восстановлена.", stored);
+                using var validation = await SendAsync(HttpMethod.Get, "/auth/v1/user", null, stored.AccessToken, cancellationToken);
+                if (validation.IsSuccessStatusCode)
+                {
+                    _session = stored;
+                    return new(true, false, "Сессия восстановлена.", stored);
+                }
+
+                if (validation.StatusCode != HttpStatusCode.Unauthorized)
+                    return new(false, false, $"Не удалось проверить сессию SubReel (HTTP {(int)validation.StatusCode}).");
             }
             using var response = await SendAsync(HttpMethod.Post, "/auth/v1/token?grant_type=refresh_token",
                 new { refresh_token = stored.RefreshToken }, null, cancellationToken);

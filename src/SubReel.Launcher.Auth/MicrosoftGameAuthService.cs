@@ -7,8 +7,6 @@ using CmlLib.Core.Auth.Microsoft;
 using SubReel.Launcher.Abstractions.Game;
 using XboxAuthNet.Game.Accounts;
 using XboxAuthNet.Game.Accounts.JsonStorage;
-using XboxAuthNet.Game.Msal;
-using XboxAuthNet.Game.Msal.OAuth;
 
 namespace SubReel.Launcher.Auth;
 
@@ -18,7 +16,6 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("SubReel.Launcher.Accounts.v1");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    private string _clientId;
     private readonly string _accountStorePath;
     private readonly string _launcherAccountsPath;
     private readonly string _skinCachePath;
@@ -29,10 +26,9 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
     private JELoginHandler? _handler;
     private GameSession? _microsoftSession;
 
-    public MicrosoftGameAuthService(string? clientId, string accountStorePath, string launcherAccountsPath,
+    public MicrosoftGameAuthService(string accountStorePath, string launcherAccountsPath,
         string skinCachePath, IHttpClientFactory httpClientFactory)
     {
-        _clientId = clientId?.Trim() ?? string.Empty;
         _accountStorePath = accountStorePath;
         _launcherAccountsPath = launcherAccountsPath;
         _skinCachePath = skinCachePath;
@@ -40,28 +36,12 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
         (_accounts, _activeAccountId) = ReadAccounts(launcherAccountsPath);
     }
 
-    public bool IsConfigured => Guid.TryParse(_clientId, out _);
-    public string MicrosoftClientId => _clientId;
-    public event EventHandler? ConfigurationChanged;
-
-    public void ConfigureMicrosoftClientId(string? clientId)
-    {
-        var normalized = clientId?.Trim() ?? string.Empty;
-        if (normalized.Length > 0 && !Guid.TryParse(normalized, out _))
-            throw new ArgumentException("Client ID должен быть GUID или пустым.", nameof(clientId));
-        if (string.Equals(_clientId, normalized, StringComparison.OrdinalIgnoreCase)) return;
-        _clientId = normalized;
-        _handler = null;
-        _microsoftSession = null;
-        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
-    }
     public LauncherAccount? ActiveAccount => _accounts.FirstOrDefault(account => account.Id == _activeAccountId);
     public IReadOnlyList<LauncherAccount> Accounts => _accounts.ToArray();
     public GameSession? CurrentSession => ActiveAccount?.Type == LauncherAccountType.Microsoft ? _microsoftSession : null;
 
     public async Task<GameSession?> TryRestoreSessionAsync(CancellationToken cancellationToken = default)
     {
-        if (!IsConfigured) return null;
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -90,7 +70,6 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
     {
         var active = ActiveAccount;
         if (active?.Type != LauncherAccountType.Microsoft) return null;
-        EnsureConfigured();
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -118,7 +97,6 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
 
     public async Task<GameSession> SignInAsync(CancellationToken cancellationToken = default)
     {
-        EnsureConfigured();
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -166,7 +144,6 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
             if (account.Type == LauncherAccountType.Microsoft &&
                 (_microsoftSession is null || !NormalizeUuid(_microsoftSession.Uuid).Equals(NormalizeUuid(account.Uuid), StringComparison.OrdinalIgnoreCase)))
             {
-                EnsureConfigured();
                 var session = await LoadProfileAsync(Map(await GetHandler().AuthenticateSilently(cancellationToken)), cancellationToken);
                 if (!NormalizeUuid(session.Uuid).Equals(NormalizeUuid(account.Uuid), StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Сохранённый Microsoft-аккаунт не совпадает с восстановленным. Войди в нужный аккаунт ещё раз.");
@@ -223,16 +200,16 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
 
     private JELoginHandler GetHandler()
     {
-        EnsureConfigured();
         if (_handler is not null) return _handler;
-        Directory.CreateDirectory(Path.GetDirectoryName(_accountStorePath)!);
-        var msal = MsalClientHelper.BuildApplicationWithCache(_clientId).GetAwaiter().GetResult();
+        var directory = Path.GetDirectoryName(_accountStorePath);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         var accountManager = new JsonXboxGameAccountManager(
             new DpapiJsonStorage(_accountStorePath),
             sessionStorage => new XboxGameAccount(sessionStorage),
             JsonSerializerOptions.Default);
-        _handler = new JELoginHandlerBuilder().WithOAuthProvider(new MsalCodeFlowProvider(msal))
-            .WithAccountManager(accountManager).Build();
+        _handler = new JELoginHandlerBuilder()
+            .WithAccountManager(accountManager)
+            .Build();
         return _handler;
     }
 
@@ -265,11 +242,6 @@ public sealed class MicrosoftGameAuthService : IGameAuthService
         {
             throw new InvalidDataException("Не удалось прочитать защищённый список аккаунтов. Файл не изменён.", exception);
         }
-    }
-
-    private void EnsureConfigured()
-    {
-        if (!IsConfigured) throw new InvalidOperationException("Укажи Microsoft Client ID в разделе «Настройки».");
     }
 
     private static string CreateOfflineUuid(string username)

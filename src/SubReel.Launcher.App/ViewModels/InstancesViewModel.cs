@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using SubReel.Launcher.Abstractions.Game;
 using SubReel.Launcher.Core.Instances;
 using SubReel.Launcher.Core.Launching;
@@ -14,6 +15,8 @@ public partial class InstancesViewModel : ObservableObject
     private readonly InstanceService _service;
     private readonly ILaunchOrchestrator _launchOrchestrator;
     private readonly IGameAuthService _authService;
+    private readonly IGameLoaderCatalog _loaderCatalog;
+    private readonly ILogger<InstancesViewModel> _logger;
 
     public ObservableCollection<MinecraftInstance> Instances { get; } = [];
 
@@ -56,11 +59,13 @@ public partial class InstancesViewModel : ObservableObject
     [ObservableProperty]
     private string _playerName = "SubReelPlayer";
 
-    public InstancesViewModel(InstanceService service, ILaunchOrchestrator launchOrchestrator, IGameAuthService authService)
+    public InstancesViewModel(InstanceService service, ILaunchOrchestrator launchOrchestrator, IGameAuthService authService, IGameLoaderCatalog loaderCatalog, ILogger<InstancesViewModel> logger)
     {
         _service = service;
         _launchOrchestrator = launchOrchestrator;
         _authService = authService;
+        _loaderCatalog = loaderCatalog;
+        _logger = logger;
     }
 
     [RelayCommand]
@@ -226,6 +231,17 @@ public partial class InstancesViewModel : ObservableObject
 
             using var launchCancellation = new CancellationTokenSource();
             _launchCancellation = launchCancellation;
+            if (instance.LoaderType == MinecraftLoaderType.Quilt)
+            {
+                var quilt = (await _loaderCatalog.GetLoadersAsync(instance.MinecraftVersion, launchCancellation.Token))
+                    .FirstOrDefault(option => option.Id.Equals("Quilt", StringComparison.OrdinalIgnoreCase) && option.IsAvailable);
+                if (!string.IsNullOrWhiteSpace(quilt?.Version) && !string.Equals(instance.LoaderVersion, quilt.Version, StringComparison.Ordinal))
+                {
+                    instance.LoaderVersion = quilt.Version;
+                    await _service.UpdateAsync(instance, launchCancellation.Token);
+                    StatusText = $"Обновлена версия Quilt до {quilt.Version}. Продолжаю запуск…";
+                }
+            }
             var progress = new Progress<LaunchProgress>(update =>
             {
                 LaunchProgress = update.Fraction * 100;
@@ -247,7 +263,8 @@ public partial class InstancesViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось запустить игру: {ex.Message}";
+            _logger.LogError(ex, "Не удалось запустить Minecraft instance {InstanceId} ({Version}, {Loader})", instance.Id, instance.MinecraftVersion, instance.LoaderType);
+            StatusText = $"Не удалось запустить игру: {DescribeFailure(ex)}";
         }
         finally
         {
@@ -281,5 +298,16 @@ public partial class InstancesViewModel : ObservableObject
 
         foreach (var item in items)
             Instances.Add(item);
+    }
+
+    private static string DescribeFailure(Exception exception)
+    {
+        var messages = new List<string>();
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (messages.Count == 0 || !string.Equals(messages[^1], current.Message, StringComparison.Ordinal))
+                messages.Add(current.Message);
+        }
+        return string.Join(" → ", messages);
     }
 }

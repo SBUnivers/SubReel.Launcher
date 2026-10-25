@@ -15,7 +15,8 @@ public sealed class LauncherSettings
     public string? LastSelectedVersionGroup { get; set; }
     public string? LastSelectedMinecraftVersion { get; set; }
     public string LastSelectedLoader { get; set; } = "Vanilla";
-    public string? MicrosoftClientId { get; set; }
+    public bool IncludeSnapshots { get; set; }
+    public bool HasCompletedWelcomeSetup { get; set; }
 }
 
 public interface ISettingsService

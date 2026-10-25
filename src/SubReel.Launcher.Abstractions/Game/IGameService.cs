@@ -27,10 +27,6 @@ public sealed record LauncherAccount(Guid Id, LauncherAccountType Type, string U
 
 public interface IGameAuthService
 {
-    bool IsConfigured { get; }
-    string MicrosoftClientId { get; }
-    event EventHandler? ConfigurationChanged;
-    void ConfigureMicrosoftClientId(string? clientId);
     GameSession? CurrentSession { get; }
     LauncherAccount? ActiveAccount { get; }
     IReadOnlyList<LauncherAccount> Accounts { get; }
@@ -80,4 +76,20 @@ public sealed record GameVersionInfo(
 public interface IGameVersionCatalog
 {
     Task<IReadOnlyList<GameVersionInfo>> GetVersionsAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>One loader choice available for a specific Minecraft version.</summary>
+public sealed record GameLoaderOption(
+    string Id,
+    string Name,
+    string? Version,
+    bool IsAvailable,
+    string AvailabilityMessage);
+
+/// <summary>Reports loader compatibility and the recommended install version.</summary>
+public interface IGameLoaderCatalog
+{
+    Task<IReadOnlyList<GameLoaderOption>> GetLoadersAsync(
+        string minecraftVersion,
+        CancellationToken cancellationToken = default);
 }

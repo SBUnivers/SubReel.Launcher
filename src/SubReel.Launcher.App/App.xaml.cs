@@ -21,7 +21,9 @@ using Velopack;
 using SubReel.Launcher.Abstractions.Modules;
 using SubReel.Launcher.Abstractions.Paths;
 using SubReel.Launcher.Abstractions.Settings;
+using SubReel.Launcher.Abstractions.Modpacks;
 using SubReel.Launcher.Infrastructure.Paths;
+using SubReel.Launcher.Infrastructure.Modpacks;
 using SubReel.Launcher.App.Views;
 using SubReel.Launcher.App.DesignSystem;
 using System.Windows.Media;
@@ -49,6 +51,7 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
+        StartupWindow? startupWindow = null;
         try
         {
             var appPaths = new LocalAppPaths();
@@ -61,6 +64,12 @@ public partial class App : Application
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 14)
                 .CreateLogger();
+
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            startupWindow = new StartupWindow();
+            MainWindow = startupWindow;
+            startupWindow.Show();
+            await Dispatcher.Yield(DispatcherPriority.Render);
 
             var modules = new ILauncherModule[]
             {
@@ -91,12 +100,43 @@ public partial class App : Application
                 client.Timeout = TimeSpan.FromSeconds(30);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("SubReelLauncher/0.1.0");
             });
+            builder.Services.AddHttpClient("LoaderMetadata", client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(20);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("SubReelLauncher/0.1.0");
+            });
+            builder.Services.AddHttpClient<IModpackCatalog, ModrinthModpackCatalog>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.modrinth.com/v2/");
+                client.Timeout = TimeSpan.FromSeconds(30);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("SubReelLauncher/0.1.0 (+https://github.com/SBUnivers/SubReel.Launcher)");
+            });
+            builder.Services.AddHttpClient<ICurseForgeApiClient, CurseForgeProxyApiClient>(client =>
+            {
+                client.BaseAddress = new Uri(builder.Configuration["Platform:CurseForgeProxyUrl"] ?? "https://www.subreel.ru/api/launcher/curseforge/");
+                client.Timeout = TimeSpan.FromMinutes(5);
+            });
+            builder.Services.AddTransient<IModpackCatalog, CurseForgeModpackCatalog>();
+            builder.Services.AddTransient<ICurseForgeModpackInstaller, CurseForgeModpackInstaller>();
+            builder.Services.AddSingleton<ILauncherSessionProvider, LauncherSessionProvider>();
+            builder.Services.AddHttpClient<IModpackInstaller, ModrinthModpackInstaller>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.modrinth.com/v2/");
+                client.Timeout = TimeSpan.FromMinutes(10);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("SubReelLauncher/0.1.0 (+https://github.com/SBUnivers/SubReel.Launcher)");
+            });
+            builder.Services.AddSingleton<ITranslationKeyStore, DpapiTranslationKeyStore>();
+            builder.Services.AddHttpClient<IModpackTextTranslator, DeepLModpackTextTranslator>(client =>
+            {
+                client.BaseAddress = new Uri("https://api-free.deepl.com/");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
             builder.Services.AddSingleton<IGameService, CmlLibGameService>();
+            builder.Services.AddSingleton<IGameLoaderCatalog, CmlLibGameLoaderCatalog>();
             builder.Services.AddHttpClient("SupabaseAuth", client => client.Timeout = TimeSpan.FromSeconds(20));
             builder.Services.AddSingleton<ISubReelAuthService, SupabaseAuthService>();
             builder.Services.AddSingleton<ISupabaseGameProfileService, SupabaseGameProfileService>();
             builder.Services.AddSingleton<IGameAuthService>(sp => new MicrosoftGameAuthService(
-                sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Authentication:MicrosoftClientId"],
                 sp.GetRequiredService<IAppPaths>().AccountsFile,
                 sp.GetRequiredService<IAppPaths>().LauncherAccountsFile,
                 Path.Combine(sp.GetRequiredService<IAppPaths>().Cache, "skins"),
@@ -127,10 +167,6 @@ public partial class App : Application
                 .GetRequiredService<INavigationService>();
 
             var settings = await _host.Services.GetRequiredService<ISettingsService>().LoadAsync();
-            var gameAuth = _host.Services.GetRequiredService<IGameAuthService>();
-            gameAuth.ConfigureMicrosoftClientId(settings.MicrosoftClientId is null
-                ? _host.Services.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Authentication:MicrosoftClientId"]
-                : settings.MicrosoftClientId);
             try
             {
                 if (ColorConverter.ConvertFromString(settings.AccentColor) is Color accentColor)
@@ -142,6 +178,104 @@ public partial class App : Application
             Application.Current.Resources["MotionLevel"] = motion.Level;
             if (Enum.TryParse<WindowBackdropMode>(settings.WindowBackdrop, true, out var backdropMode))
                 _host.Services.GetRequiredService<IWindowBackdropService>().SetMode(backdropMode);
+
+            startupWindow.SetCheck("files", "Проверяю приложение и локальные папки…", StartupCheckState.Running);
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            try
+            {
+                var executable = Environment.ProcessPath;
+                if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
+                    throw new FileNotFoundException("Не найден исполняемый файл лаунчера.");
+                appPaths.EnsureCreated();
+                var requiredDirectories = new[] { appPaths.Root, appPaths.Auth, appPaths.Cache, appPaths.Instances, appPaths.Shared };
+                var missingDirectory = requiredDirectories.FirstOrDefault(path => !Directory.Exists(path));
+                if (missingDirectory is not null) throw new IOException($"Не удалось подготовить папку {missingDirectory}.");
+                startupWindow.SetCheck("files", "Файлы приложения на месте; папки данных готовы.", StartupCheckState.Passed);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Начальная проверка файлов лаунчера завершилась с проблемой");
+                startupWindow.SetCheck("files", $"Проверка завершилась с проблемой: {ex.Message}", StartupCheckState.Failed);
+            }
+
+            var gameAuth = _host.Services.GetRequiredService<IGameAuthService>();
+            startupWindow.SetCheck("license", "Проверяю сохранённый профиль Minecraft…", StartupCheckState.Running);
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            try
+            {
+                using var gameCheckTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                var gameSession = await gameAuth.TryRestoreSessionAsync(gameCheckTimeout.Token);
+                if (gameSession is not null)
+                    startupWindow.SetCheck("license", $"Профиль {gameSession.Username} подтверждён через Minecraft Services.", StartupCheckState.Passed);
+                else if (gameAuth.ActiveAccount?.Type == LauncherAccountType.Offline)
+                    startupWindow.SetCheck("license", "Активен офлайн-профиль. Лицензия Minecraft Java этим профилем не подтверждается.", StartupCheckState.Warning);
+                else
+                    startupWindow.SetCheck("license", "Microsoft-профиль не подключён. Лицензию можно проверить после входа.", StartupCheckState.Warning);
+            }
+            catch (OperationCanceledException)
+            {
+                startupWindow.SetCheck("license", "Проверка заняла слишком много времени. Её можно повторить в профиле.", StartupCheckState.Warning);
+            }
+            catch (Exception ex)
+            {
+                Log.Information(ex, "Проверка лицензии Minecraft при запуске не завершилась");
+                startupWindow.SetCheck("license", $"Не удалось проверить профиль: {ex.Message}", StartupCheckState.Warning);
+            }
+
+            var subReelAuth = _host.Services.GetRequiredService<ISubReelAuthService>();
+            async Task CheckSubReelSessionAsync()
+            {
+                startupWindow.SetCheck("subreel", "Проверяю сессию SubReel…", StartupCheckState.Running);
+                await Dispatcher.Yield(DispatcherPriority.Background);
+                try
+                {
+                    using var sessionTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                    var authRestore = await subReelAuth.RestoreSessionAsync(sessionTimeout.Token);
+                    if (authRestore.Success && authRestore.Session is { } session)
+                        startupWindow.SetCheck("subreel", $"Вход выполнен{(string.IsNullOrWhiteSpace(session.Email) ? "." : $": {session.Email}")}", StartupCheckState.Passed);
+                    else
+                        startupWindow.SetCheck("subreel", authRestore.Message, StartupCheckState.Warning);
+                }
+                catch (OperationCanceledException)
+                {
+                    startupWindow.SetCheck("subreel", "Проверка заняла слишком много времени. Проверь подключение.", StartupCheckState.Warning);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Не удалось проверить сессию SubReel при запуске");
+                    startupWindow.SetCheck("subreel", $"Не удалось проверить сессию: {ex.Message}", StartupCheckState.Warning);
+                }
+            }
+
+            startupWindow.LoginRequested += async (_, _) =>
+            {
+                try
+                {
+                    var authWindow = new AuthWindow(subReelAuth, gameAuth,
+                        _host.Services.GetRequiredService<ISupabaseGameProfileService>()) { Owner = startupWindow };
+                    authWindow.ShowDialog();
+                    await CheckSubReelSessionAsync();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Не удалось открыть вход SubReel из приветственного экрана");
+                    startupWindow.SetCheck("subreel", ex.Message, StartupCheckState.Warning);
+                }
+            };
+
+            await CheckSubReelSessionAsync();
+            var completedSetup = await startupWindow.ShowWelcomeSetupAsync(settings);
+            if (completedSetup is not null)
+            {
+                settings = completedSetup;
+                await _host.Services.GetRequiredService<ISettingsService>().SaveAsync(settings);
+            }
+            if (settings.ReduceAnimations)
+            {
+                _host.Services.GetRequiredService<IMotionService>().SetLevel(MotionLevel.Reduced);
+                Application.Current.Resources["MotionLevel"] = MotionLevel.Reduced;
+            }
+
             foreach (var module in _host.Services.GetServices<ILauncherModule>())
             {
                 foreach (var item in module.GetNavItems())
@@ -155,18 +289,18 @@ public partial class App : Application
 
             navigation.NavigateTo("home");
 
-            var mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
-            await mainViewModel.RestoreAccountAsync();
-
             var window = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = window;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
             window.Show();
+            startupWindow.Close();
 
             Log.Information("SubReel Launcher запущен");
         }
         catch (Exception ex)
         {
             Log.Fatal(ex, "Не удалось запустить SubReel Launcher");
+            startupWindow?.Close();
 
             MessageBox.Show(
                 $"Не удалось запустить лаунчер.\n\n{ex.Message}",

@@ -50,19 +50,24 @@ public partial class AuthWindow : Window
 
     private async void AuthWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        if (_subReelAuth.IsConfigured && _subReelAuth.CurrentSession is null)
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        try
         {
-            SetBusy(true);
-            try
+            if (_subReelAuth.IsConfigured && _subReelAuth.CurrentSession is null)
             {
-                var result = await _subReelAuth.RestoreSessionAsync();
+                SetBusy(true);
+                var result = await _subReelAuth.RestoreSessionAsync(timeout.Token);
                 if (result.Success && result.Session is { } session) SetPlatformSignedIn(session);
                 else if (!string.IsNullOrWhiteSpace(result.Message)) StatusText.Text = result.Message;
             }
-            catch (Exception ex) { StatusText.Text = ex.Message; }
-            finally { SetBusy(false); }
+            await RefreshLinkedProfileAsync(showStatus: false, cancellationToken: timeout.Token);
         }
-        await RefreshLinkedProfileAsync(showStatus: false);
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        {
+            StatusText.Text = "Проверка аккаунта заняла слишком много времени. Проверь подключение и нажми «Обновить».";
+        }
+        catch (Exception ex) { StatusText.Text = ex.Message; }
+        finally { SetBusy(false); }
     }
 
     private async void SignIn_Click(object sender, RoutedEventArgs e) => await RunAuthAsync(() => _subReelAuth.SignInAsync(EmailBox.Text, PasswordBox.Password));
@@ -314,7 +319,7 @@ public partial class AuthWindow : Window
         finally { SetBusy(false); }
     }
 
-    private async Task RefreshLinkedProfileAsync(bool showStatus)
+    private async Task RefreshLinkedProfileAsync(bool showStatus, CancellationToken cancellationToken = default)
     {
         if (_subReelAuth.CurrentSession is null)
         {
@@ -325,7 +330,7 @@ public partial class AuthWindow : Window
         }
         try
         {
-            var profile = await _gameProfileService.GetLinkedProfileAsync();
+            var profile = await _gameProfileService.GetLinkedProfileAsync(cancellationToken);
             if (profile is null)
             {
                 _hasLinkedProfile = false;
@@ -340,6 +345,7 @@ public partial class AuthWindow : Window
             }
             LinkButton.IsEnabled = _gameAuth.ActiveAccount?.Type == LauncherAccountType.Microsoft;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             if (showStatus) StatusText.Text = ex.Message;
@@ -401,8 +407,8 @@ public partial class AuthWindow : Window
         UpdatePlatformView();
         SignOutButton.IsEnabled = !_busy && signedIn;
         LinkButton.IsEnabled = !_busy && signedIn && _gameAuth.ActiveAccount?.Type == LauncherAccountType.Microsoft;
-        MicrosoftButton.IsEnabled = !_busy && _gameAuth.IsConfigured;
-        LicenseCheckButton.IsEnabled = !_busy && _gameAuth.IsConfigured;
+        MicrosoftButton.IsEnabled = !_busy;
+        LicenseCheckButton.IsEnabled = !_busy;
         BuyMinecraftButton.IsEnabled = !_busy;
         OfflineButton.IsEnabled = !_busy;
         UnlinkButton.IsEnabled = !_busy && signedIn && _hasLinkedProfile;
@@ -440,8 +446,8 @@ public partial class AuthWindow : Window
         SignInButton.IsEnabled = !busy;
         SignUpButton.IsEnabled = !busy;
         SignOutButton.IsEnabled = !busy && _subReelAuth.CurrentSession is not null;
-        MicrosoftButton.IsEnabled = !busy && _gameAuth.IsConfigured;
-        LicenseCheckButton.IsEnabled = !busy && _gameAuth.IsConfigured;
+        MicrosoftButton.IsEnabled = !busy;
+        LicenseCheckButton.IsEnabled = !busy;
         BuyMinecraftButton.IsEnabled = !busy;
         OfflineButton.IsEnabled = !busy;
         GameAccountBox.IsEnabled = !busy;

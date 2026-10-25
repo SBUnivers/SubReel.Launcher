@@ -5,6 +5,9 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="SubReel Launcher" Width="1180" Height="760" MinWidth="900" MinHeight="620"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource AppBackground}">
+    <Window.Resources>
+        <design:MinecraftFaceConverter x:Key="MinecraftFaceConverter"/>
+    </Window.Resources>
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="62" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
@@ -86,9 +89,9 @@
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding AccountText}" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                        <Button Content="—" Click="Minimize_Click" Style="{StaticResource IconButton}" Margin="16,0,4,0" ToolTip="Свернуть"/>
-                        <Button Content="□" Click="Maximize_Click" Style="{StaticResource IconButton}" Margin="0,0,4,0" ToolTip="Развернуть"/>
-                        <Button Content="×" Click="Close_Click" Style="{StaticResource IconButton}" ToolTip="Закрыть"/>
+                        <Button Content="—" Click="Minimize_Click" Style="{StaticResource IconButton}" Margin="16,0,4,0" ToolTip="Свернуть" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button x:Name="MaximizeButton" Content="□" Click="Maximize_Click" Style="{StaticResource IconButton}" Margin="0,0,4,0" ToolTip="Развернуть" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button Content="×" Click="Close_Click" Style="{StaticResource IconButton}" ToolTip="Закрыть" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
                     </StackPanel>
                 </DockPanel>
             </Border>

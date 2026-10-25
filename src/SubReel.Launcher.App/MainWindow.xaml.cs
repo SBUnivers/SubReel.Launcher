@@ -22,6 +22,8 @@ public partial class MainWindow : Window
         _subReelAuth = subReelAuth;
         _gameAuth = gameAuth;
         _gameProfileService = gameProfileService;
+        StateChanged += (_, _) => UpdateWindowButtons();
+        UpdateWindowButtons();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -31,8 +33,19 @@ public partial class MainWindow : Window
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-    private void Maximize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    private void Maximize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void UpdateWindowButtons()
+    {
+        if (MaximizeButton is null) return;
+        var isMaximized = WindowState == WindowState.Maximized;
+        MaximizeButton.Content = isMaximized ? "❐" : "□";
+        MaximizeButton.ToolTip = isMaximized ? "Восстановить" : "Развернуть";
+    }
 
     private void AccountMenu_Click(object sender, RoutedEventArgs e)
     {

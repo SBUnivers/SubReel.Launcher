@@ -29,13 +29,12 @@ public partial class MainViewModel : ObservableObject
         : "Добавить аккаунт";
     public LauncherAccount? ActiveAccount => _auth.ActiveAccount;
     public bool CanSignIn => true;
-    public bool CanSignInMicrosoft => _auth.IsConfigured;
+    public bool CanSignInMicrosoft => true;
 
     public MainViewModel(INavigationService navigation, IGameAuthService auth)
     {
         _navigation = navigation;
         _auth = auth;
-        _auth.ConfigurationChanged += (_, _) => OnPropertyChanged(nameof(CanSignInMicrosoft));
         _navigation.PropertyChanged += OnNavigationPropertyChanged;
         RefreshAccounts();
     }
@@ -126,7 +125,6 @@ public partial class MainViewModel : ObservableObject
         foreach (var account in _auth.Accounts) Accounts.Add(account);
         OnPropertyChanged(nameof(AccountText));
         OnPropertyChanged(nameof(ActiveAccount));
-        OnPropertyChanged(nameof(CanSignInMicrosoft));
     }
 
     private void OnNavigationPropertyChanged(
