@@ -10,6 +10,7 @@ public sealed class ModrinthModpackCatalog(HttpClient httpClient) : IModpackCata
 
     public string Id => "modrinth";
     public string DisplayName => "Modrinth";
+    public ModpackProvider Provider => ModpackProvider.Modrinth;
 
     public async Task<ModpackSearchPage> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default)
     {
@@ -47,7 +48,10 @@ public sealed class ModrinthModpackCatalog(HttpClient httpClient) : IModpackCata
                 var downloads = hit.TryGetProperty("downloads", out var count) && count.TryGetInt64(out var value) ? value : 0;
                 items.Add(new ModpackSummary(id, slug, title,
                     ReadString(hit, "description") ?? string.Empty,
-                    ReadString(hit, "icon_url"), downloads, categories, Id));
+                    ReadString(hit, "icon_url"), downloads, categories, Provider)
+                {
+                    Author = ReadString(hit, "author")
+                });
             }
         }
 
@@ -91,7 +95,10 @@ public sealed class ModrinthModpackCatalog(HttpClient httpClient) : IModpackCata
                 ReadStringArray(item, "loaders"),
                 file.ValueKind == JsonValueKind.Object ? ReadString(file, "filename") : null,
                 file.ValueKind == JsonValueKind.Object ? ReadString(file, "url") : null,
-                hashes.ValueKind == JsonValueKind.Object ? ReadString(hashes, "sha1") : null));
+                hashes.ValueKind == JsonValueKind.Object ? ReadString(hashes, "sha1") : null)
+            {
+                PublishedAt = ReadDate(item, "date_published")
+            });
         }
         return versions;
     }
@@ -105,4 +112,8 @@ public sealed class ModrinthModpackCatalog(HttpClient httpClient) : IModpackCata
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Array
             ? value.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToArray()
             : [];
+
+    private static DateTimeOffset? ReadDate(JsonElement element, string property) =>
+        DateTimeOffset.TryParse(ReadString(element, property), System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal, out var value) ? value : null;
 }

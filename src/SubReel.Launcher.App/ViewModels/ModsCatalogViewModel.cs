@@ -283,8 +283,38 @@ public partial class ModsCatalogViewModel : ObservableObject
             IsBusy = true;
             StatusText = $"Загружаю версии «{project.Title}»…";
             var versions = await SelectedSource.GetVersionsAsync(project.Id);
-            foreach (var version in versions) ProjectVersions.Add(version);
-            StatusText = versions.Count == 0 ? "У проекта пока нет опубликованных версий сборки." : $"Версий сборки: {versions.Count}. Выбери совместимую версию для установки.";
+            var orderedVersions = versions.Select((version, index) => (Version: version, Index: index))
+                .OrderByDescending(item => item.Version.PublishedAt.HasValue)
+                .ThenByDescending(item => item.Version.PublishedAt)
+                .ThenBy(item => item.Index)
+                .Select(item => item.Version)
+                .ToArray();
+            var instances = await _instanceService.GetAllAsync();
+            var projectInstances = instances
+                .Select(instance => (Instance: instance, Identity: GetInstalledModpackIdentity(instance)))
+                .Where(item => item.Identity is not null &&
+                    item.Identity.Value.Provider == project.Provider &&
+                    string.Equals(item.Identity.Value.ProjectId, project.Id, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            for (var versionIndex = 0; versionIndex < orderedVersions.Length; versionIndex++)
+            {
+                var version = orderedVersions[versionIndex];
+                var installedInstance = projectInstances.FirstOrDefault(item =>
+                    string.Equals(item.Identity!.Value.VersionId, version.Id, StringComparison.OrdinalIgnoreCase)).Instance;
+                var otherInstalledInstance = projectInstances.FirstOrDefault(item =>
+                    !string.Equals(item.Identity!.Value.VersionId, version.Id, StringComparison.OrdinalIgnoreCase)).Instance;
+                ProjectVersions.Add(version with
+                {
+                    IsInstalled = installedInstance is not null,
+                    IsUpdateAvailable = versionIndex == 0 && installedInstance is null && otherInstalledInstance is not null,
+                    InstalledInstanceName = installedInstance?.Name ?? otherInstalledInstance?.Name
+                });
+            }
+            StatusText = versions.Count == 0
+                ? "У проекта пока нет опубликованных версий сборки."
+                : projectInstances.Length > 0
+                    ? $"Версий сборки: {versions.Count}. Обновление установится отдельным инстансом; текущая сборка останется без изменений."
+                    : $"Версий сборки: {versions.Count}. Уже установленные версии отмечены в списке.";
         }
         catch (Exception exception)
         {
@@ -313,16 +343,26 @@ public partial class ModsCatalogViewModel : ObservableObject
     private void OpenVersion(ModpackVersionSummary? version)
     {
         if (SelectedProject is null || version is null) return;
-        var url = SelectedProject.SourceId == "curseforge"
+        var url = SelectedProject.Provider == ModpackProvider.CurseForge
             ? $"https://www.curseforge.com/minecraft/modpacks/{Uri.EscapeDataString(SelectedProject.Slug)}/files/{Uri.EscapeDataString(version.Id)}"
             : $"https://modrinth.com/modpack/{Uri.EscapeDataString(SelectedProject.Slug)}/version/{Uri.EscapeDataString(version.Id)}";
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     [RelayCommand]
+    private void OpenProjectSource(ModpackSummary? project)
+    {
+        if (project is null || string.IsNullOrWhiteSpace(project.Slug)) return;
+        var url = project.Provider == ModpackProvider.CurseForge
+            ? $"https://www.curseforge.com/minecraft/modpacks/{Uri.EscapeDataString(project.Slug)}"
+            : $"https://modrinth.com/modpack/{Uri.EscapeDataString(project.Slug)}";
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    }
+
+    [RelayCommand]
     private async Task InstallVersionAsync(ModpackVersionSummary? version)
     {
-        if (version is null || SelectedProject is null || IsBusy) return;
+        if (version is null || SelectedProject is null || IsBusy || version.IsInstalled) return;
         var project = SelectedProject;
         try
         {
@@ -334,11 +374,18 @@ public partial class ModsCatalogViewModel : ObservableObject
             {
                 StatusText = update.Message;
             });
-            var installed = project.SourceId == "curseforge"
+            var installed = project.Provider == ModpackProvider.CurseForge
                 ? await _curseForgeInstaller.InstallAsync(project, version, progress: progress, cancellationToken: cancellation.Token)
                 : await _installer.InstallAsync(project, version, progress: progress, cancellationToken: cancellation.Token);
             StatusText = $"Сборка «{installed.Name}» добавлена в «Мои сборки» ({installed.Loader}, Minecraft {installed.MinecraftVersion}). Первый запуск подготовит игровые файлы." +
                 (installed.Warning is null ? "" : $" {installed.Warning}");
+            var installedVersionIndex = ProjectVersions.IndexOf(version);
+            if (installedVersionIndex >= 0)
+                ProjectVersions[installedVersionIndex] = version with
+                {
+                    IsInstalled = true,
+                    InstalledInstanceName = installed.Name
+                };
         }
         catch (OperationCanceledException) { StatusText = "Установка сборки отменена."; }
         catch (Exception exception)
@@ -350,6 +397,20 @@ public partial class ModsCatalogViewModel : ObservableObject
 
     [RelayCommand]
     private void CancelInstall() => _installCancellation?.Cancel();
+
+    private static (ModpackProvider Provider, string ProjectId, string VersionId)? GetInstalledModpackIdentity(MinecraftInstance instance)
+    {
+        var manifest = instance.ModpackManifest;
+        if (manifest is not null && Enum.TryParse<ModpackProvider>(manifest.Provider, true, out var provider) && Enum.IsDefined(provider) &&
+            !string.IsNullOrWhiteSpace(manifest.ProjectId) && !string.IsNullOrWhiteSpace(manifest.VersionId))
+            return (provider, manifest.ProjectId, manifest.VersionId);
+
+        var parts = instance.Source?.Split(':', 3, StringSplitOptions.TrimEntries);
+        return parts is { Length: 3 } && Enum.TryParse<ModpackProvider>(parts[0], true, out provider) && Enum.IsDefined(provider) &&
+                        !string.IsNullOrWhiteSpace(parts[1]) && !string.IsNullOrWhiteSpace(parts[2])
+            ? (provider, parts[1], parts[2])
+            : null;
+    }
 
     private async void QueueSearch()
     {

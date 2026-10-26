@@ -32,18 +32,36 @@ public sealed class CurseForgeModpackInstaller(ICurseForgeApiClient api, IAppPat
             progress?.Report(new("Загружаю архив CurseForge…", 0.03));
             await using (var output = new FileStream(packPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, true))
             {
-                await api.DownloadFileAsync(projectId, packFileId, output, cancellationToken: cancellationToken);
+                await using var limitedOutput = new LimitedWriteStream(output, MaxPackArchiveBytes);
+                await api.DownloadFileAsync(projectId, packFileId, limitedOutput, cancellationToken: cancellationToken);
                 if (output.Length is <= 0 or > MaxPackArchiveBytes) throw new InvalidDataException("Размер архива модпака недопустим.");
             }
 
             var manifest = ReadManifest(packPath);
             var loader = ParseLoader(manifest.MinecraftLoaders);
             var packName = string.IsNullOrWhiteSpace(manifest.Name) ? project.Title : manifest.Name.Trim();
-            instance = await instances.CreateAsync(packName, manifest.MinecraftVersion, loader.Type, loader.Version, memoryMb, cancellationToken);
+            instance = await instances.CreateAsync(packName, manifest.MinecraftVersion, loader.Type, loader.Version, memoryMb, cancellationToken, isModpackInstall: true);
             instance.Source = $"CurseForge:{projectId}:{packFileId}";
+            instance.ModpackManifest = new InstalledModpackManifest
+            {
+                Provider = ModpackProvider.CurseForge.ToString(),
+                ProjectId = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ProjectSlug = project.Slug,
+                ProjectTitle = project.Title,
+                VersionId = packFileId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                VersionName = version.VersionNumber,
+                MinecraftVersion = manifest.MinecraftVersion,
+                Loader = loader.Type.ToString(),
+                LoaderVersion = loader.Version
+            };
             await instances.UpdateAsync(instance, cancellationToken);
 
             var missingFiles = new List<string>();
+            var overrideBytes = GetOverrideUncompressedSize(packPath, manifest.OverridesDirectory);
+            if (overrideBytes > MaxExtractedBytes)
+                throw new InvalidDataException("Размер файлов overrides превышает допустимый лимит.");
+            var downloadBudget = MaxExtractedBytes - overrideBytes;
+            long downloadedBytes = 0;
             var fileEntries = manifest.Files.Where(item => item.Required).ToArray();
             for (var offset = 0; offset < fileEntries.Length; offset += 50)
             {
@@ -70,10 +88,19 @@ public sealed class CurseForgeModpackInstaller(ICurseForgeApiClient api, IAppPat
                     var destination = Path.Combine(modDirectory, fileName);
                     try
                     {
+                        var remainingBudget = downloadBudget - downloadedBytes;
+                        if (remainingBudget <= 0)
+                            throw new InvalidDataException("Общий размер файлов сборки превышает допустимый лимит.");
+                        var fileLimit = target.FileLength > 0 ? Math.Min(target.FileLength, remainingBudget) : remainingBudget;
                         progress?.Report(new($"Скачиваю мод {offset + Array.IndexOf(batch, item) + 1} из {fileEntries.Length}: {fileName}",
                             0.1 + 0.78 * (offset + Array.IndexOf(batch, item)) / Math.Max(1, fileEntries.Length)));
                         await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, true))
-                            await api.DownloadFileAsync(item.ProjectId, item.FileId, output, cancellationToken: cancellationToken);
+                        {
+                            await using var limitedOutput = new LimitedWriteStream(output, fileLimit, bytes => downloadedBytes = checked(downloadedBytes + bytes));
+                            await api.DownloadFileAsync(item.ProjectId, item.FileId, limitedOutput, cancellationToken: cancellationToken);
+                            if (target.FileLength > 0 && output.Length != target.FileLength)
+                                throw new InvalidDataException($"Размер файла {fileName} не совпадает с метаданными CurseForge.");
+                        }
                         if (!await HasValidHashAsync(destination, target.Hashes, cancellationToken))
                             throw new InvalidDataException($"Не совпала контрольная сумма файла {fileName}.");
                     }
@@ -87,6 +114,8 @@ public sealed class CurseForgeModpackInstaller(ICurseForgeApiClient api, IAppPat
 
             await ExtractOverridesAsync(packPath, instance.GameDirectory, manifest.OverridesDirectory, progress, cancellationToken);
             var warning = missingFiles.Count == 0 ? null : $"Не удалось получить {missingFiles.Count} файл(ов) из CurseForge: {string.Join(", ", missingFiles.Take(8))}";
+            instance.InstallState = InstanceInstallState.Ready;
+            await instances.UpdateAsync(instance, cancellationToken);
             progress?.Report(new("Профиль CurseForge создан.", 1));
             return new InstalledModpack(instance.Id, instance.Name, instance.MinecraftVersion, instance.LoaderType.ToString(), warning);
         }
@@ -188,6 +217,22 @@ public sealed class CurseForgeModpackInstaller(ICurseForgeApiClient api, IAppPat
             if (copied != entry.Length) throw new InvalidDataException("Размер файла overrides не совпадает с архивом.");
         }
         progress?.Report(new("Файлы overrides установлены.", 0.98));
+    }
+
+    private static long GetOverrideUncompressedSize(string zipPath, string overridesFolder)
+    {
+        var prefix = overridesFolder.TrimEnd('/', '\\').Replace('\\', '/') + "/";
+        using var archive = ZipFile.OpenRead(zipPath);
+        long total = 0;
+        foreach (var entry in archive.Entries)
+        {
+            if (!entry.FullName.Replace('\\', '/').StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+                entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
+                continue;
+            total = checked(total + entry.Length);
+            if (total > MaxExtractedBytes) return total;
+        }
+        return total;
     }
 
     private static async Task<bool> HasValidHashAsync(string path, IReadOnlyList<CurseForgeFileHash> hashes, CancellationToken ct)

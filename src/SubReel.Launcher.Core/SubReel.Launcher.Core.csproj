@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SubReel.Launcher.Abstractions\SubReel.Launcher.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <PropertyGroup>

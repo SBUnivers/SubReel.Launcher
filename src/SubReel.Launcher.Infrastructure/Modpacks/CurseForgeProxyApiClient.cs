@@ -135,8 +135,14 @@ public sealed class CurseForgeProxyApiClient(HttpClient http, ILauncherSessionPr
             ? categoryArray.EnumerateArray().Select(x => ReadString(x, "name")).Where(x => x.Length > 0).ToArray()
             : [];
         var logo = project.TryGetProperty("logo", out var logoObject) ? ReadNullableString(logoObject, "url") : null;
+        var author = project.TryGetProperty("authors", out var authors) && authors.ValueKind == JsonValueKind.Array
+            ? authors.EnumerateArray().Select(item => ReadNullableString(item, "name")).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            : null;
         return new ModpackSummary(ReadString(project, "id"), ReadString(project, "slug"), ReadString(project, "name"),
-            ReadString(project, "summary"), logo, ReadLong(project, "downloadCount"), categories, "curseforge");
+            ReadString(project, "summary"), logo, ReadLong(project, "downloadCount"), categories, ModpackProvider.CurseForge)
+        {
+            Author = author
+        };
     }
 
     private static CurseForgeModpackFile ParseFile(JsonElement file)
@@ -149,7 +155,11 @@ public sealed class CurseForgeProxyApiClient(HttpClient http, ILauncherSessionPr
             : [];
         return new CurseForgeModpackFile(ReadInt(file, "id"), ReadInt(file, "modId"), ReadString(file, "displayName"),
             ReadString(file, "fileName"), ReadNullableString(file, "downloadUrl"), ReadLong(file, "fileLength"), hashes,
-            gameVersions, !file.TryGetProperty("isAvailable", out var available) || available.ValueKind != JsonValueKind.False);
+            gameVersions, !file.TryGetProperty("isAvailable", out var available) || available.ValueKind != JsonValueKind.False)
+        {
+            PublishedAt = DateTimeOffset.TryParse(ReadNullableString(file, "fileDate"), System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal, out var publishedAt) ? publishedAt : null
+        };
     }
 
     private static string ReadString(JsonElement element, string name) =>

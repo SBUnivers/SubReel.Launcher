@@ -1,4 +1,3 @@
-using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 using SubReel.Launcher.Abstractions.Modules;
 using SubReel.Launcher.App.Services;
@@ -40,8 +39,7 @@ public sealed class NewsModule : ILauncherModule
     public string Id => "news";
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<ILauncherNewsService>(sp => new SupabaseLauncherNewsService(
-            new HttpClient(), sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()));
+        services.AddHttpClient<ILauncherNewsService, SupabaseLauncherNewsService>();
         services.AddTransient<NewsViewModel>();
     }
     public IEnumerable<NavItem> GetNavItems() => [new("news", "Новости", "▤", "Новости и релизы лаунчера.", typeof(NewsViewModel))];

@@ -34,9 +34,7 @@ public partial class DesignSystemViewModel : ObservableObject
     private async Task SetAccentAsync(Color color)
     {
         _theme.SetAccent(color);
-        var settings = await _settings.LoadAsync();
-        settings.AccentColor = color.ToString();
-        await _settings.SaveAsync(settings);
+        await _settings.UpdateAsync(settings => settings.AccentColor = color.ToString());
     }
 
     partial void OnReducedMotionChanged(bool value)
@@ -48,8 +46,6 @@ public partial class DesignSystemViewModel : ObservableObject
 
     private async Task PersistMotionAsync(bool value)
     {
-        var settings = await _settings.LoadAsync();
-        settings.ReduceAnimations = value;
-        await _settings.SaveAsync(settings);
+        await _settings.UpdateAsync(settings => settings.ReduceAnimations = value);
     }
 }

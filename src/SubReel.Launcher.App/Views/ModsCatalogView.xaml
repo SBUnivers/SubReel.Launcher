@@ -1,7 +1,8 @@
 <UserControl x:Class="SubReel.Launcher.App.Views.ModsCatalogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:views="clr-namespace:SubReel.Launcher.App.Views">
+             xmlns:views="clr-namespace:SubReel.Launcher.App.Views"
+             xmlns:design="clr-namespace:SubReel.Launcher.App.DesignSystem">
     <UserControl.Resources>
         <views:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <views:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
@@ -22,24 +23,18 @@
         </StackPanel>
 
         <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="16" Margin="0,22,0,18">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+            <design:ResponsiveTilePanel PreferredTileWidth="190" HorizontalGap="10" VerticalGap="10">
                 <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         MinWidth="220" Padding="12,9" VerticalContentAlignment="Center"
+                         Padding="12,9" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"
                          ToolTip="Поиск модпаков" AutomationProperties.Name="Поиск модпаков"/>
-                <TextBox Grid.Column="1" Text="{Binding MinecraftVersion, UpdateSourceTrigger=PropertyChanged}"
-                         Width="120" Margin="10,0,0,0" Padding="12,9" VerticalContentAlignment="Center"
+                <TextBox Text="{Binding MinecraftVersion, UpdateSourceTrigger=PropertyChanged}"
+                         Padding="12,9" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"
                          ToolTip="Версия Minecraft, например 1.21.1" AutomationProperties.Name="Версия Minecraft"/>
-                <ComboBox Grid.Column="2" ItemsSource="{Binding Loaders}" SelectedItem="{Binding SelectedLoader}"
-                          Width="135" Margin="10,0,0,0" Padding="10,8"/>
-                <ComboBox Grid.Column="3" ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}"
-                          DisplayMemberPath="DisplayName" Width="140" Margin="10,0,0,0" Padding="10,8"/>
-            </Grid>
+                <ComboBox ItemsSource="{Binding Loaders}" SelectedItem="{Binding SelectedLoader}"
+                          Padding="10,8" HorizontalAlignment="Stretch"/>
+                <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}"
+                          DisplayMemberPath="DisplayName" Padding="10,8" HorizontalAlignment="Stretch"/>
+            </design:ResponsiveTilePanel>
         </Border>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
@@ -59,16 +54,16 @@
                         <TextBlock Text="{Binding WizardStepLabel}" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </DockPanel>
-                <Grid Grid.Row="1" MaxWidth="620" HorizontalAlignment="Left">
+                <Grid Grid.Row="1" MaxWidth="620" HorizontalAlignment="Stretch">
                     <StackPanel Visibility="{Binding IsWizardStepOne, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Text="1. Выбери версию Minecraft" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
-                        <ComboBox ItemsSource="{Binding GameVersions}" SelectedItem="{Binding SelectedGameVersion}" DisplayMemberPath="Id" Margin="0,12,0,0" Padding="10,8"/>
+                        <ComboBox ItemsSource="{Binding GameVersions}" SelectedItem="{Binding SelectedGameVersion}" DisplayMemberPath="Id" Margin="0,12,0,0" Padding="10,8" HorizontalAlignment="Stretch"/>
                         <TextBlock Text="Загружаю версии…" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" Visibility="{Binding IsLoadingWizardOptions, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsWizardStepTwo, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Text="2. Выбери загрузчик" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
                         <ListBox ItemsSource="{Binding AvailableLoaders}" SelectedItem="{Binding SelectedGameLoader}" Margin="0,12,0,0" Background="Transparent" BorderThickness="0">
-                            <ListBox.ItemTemplate><DataTemplate><Border Background="{DynamicResource CardRaisedBackground}" CornerRadius="10" Padding="12" Margin="0,3"><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/><TextBlock Text="{Binding AvailabilityMessage}" Foreground="{DynamicResource TextSecondary}" Margin="12,0,0,0"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
+                            <ListBox.ItemTemplate><DataTemplate><Border Background="{DynamicResource CardRaisedBackground}" CornerRadius="10" Padding="12" Margin="0,3"><StackPanel><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/><TextBlock Text="{Binding AvailabilityMessage}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
                         </ListBox>
                         <TextBlock Text="Проверяю совместимые загрузчики…" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" Visibility="{Binding IsLoadingWizardOptions, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     </StackPanel>
@@ -109,18 +104,25 @@
                         </Border>
                         <StackPanel Margin="16,2,0,0" VerticalAlignment="Center">
                             <TextBlock Text="{Binding DisplayProjectTitle}" FontSize="23" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
-                            <TextBlock Text="{Binding SelectedProject.CategoriesLabel}" Margin="0,5,0,0" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="{Binding SelectedProject.Author}" Margin="0,3,0,0" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
+                            <TextBlock Text="{Binding SelectedProject.ProviderLabel}" Margin="0,3,0,0" FontSize="11" Foreground="{DynamicResource AccentBrush}"/>
                         </StackPanel>
                     </StackPanel>
                 </DockPanel>
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="3*"/></Grid.ColumnDefinitions>
-                    <StackPanel Margin="0,0,24,0">
+                <design:ResponsiveTilePanel Grid.Row="1" PreferredTileWidth="420" HorizontalGap="24" VerticalGap="20">
+                    <StackPanel>
                         <TextBlock Text="О проекте" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
                         <TextBlock Text="{Binding DisplayProjectDescription}" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
                         <TextBlock Text="{Binding SelectedProject.DownloadsLabel, StringFormat={}{0} загрузок}" Margin="0,12,0,0" Foreground="{DynamicResource TextSecondary}"/>
+                        <TextBlock Text="{Binding SelectedProject.CategoriesLabel}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
+                        <Button Content="Открыть страницу источника"
+                                Command="{Binding OpenProjectSourceCommand}"
+                                CommandParameter="{Binding SelectedProject}"
+                                HorizontalAlignment="Left"
+                                Margin="0,12,0,0"
+                                Padding="12,7"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="1">
+                    <StackPanel>
                         <TextBlock Text="Версии сборки" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,6"/>
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding ProjectVersions}">
@@ -128,9 +130,10 @@
                                     <DataTemplate>
                                         <Border Background="{DynamicResource CardRaisedBackground}" CornerRadius="10" Padding="10" Margin="0,3">
                                             <DockPanel>
-                                                <Button Content="Установить" Command="{Binding DataContext.InstallVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}" IsEnabled="{Binding CanInstall}" DockPanel.Dock="Right" Padding="10,5" Margin="6,0,0,0" Style="{StaticResource PrimaryButton}"/>
-                                                <Button Content="Открыть на Modrinth" Command="{Binding DataContext.OpenVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                <Button Content="{Binding InstallButtonLabel}" Command="{Binding DataContext.InstallVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}" IsEnabled="{Binding InstallActionEnabled}" DockPanel.Dock="Right" Padding="10,5" Margin="6,0,0,0" Style="{StaticResource PrimaryButton}"
+                                                        ToolTip="{Binding InstalledInstanceName}"/>
+                                                <Button Content="Открыть источник" Command="{Binding DataContext.OpenVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                         CommandParameter="{Binding}" DockPanel.Dock="Right" Padding="10,5"/>
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
@@ -144,7 +147,7 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </StackPanel>
-                </Grid>
+                </design:ResponsiveTilePanel>
             </Grid>
         </Border>
 
@@ -152,12 +155,12 @@
             <ItemsControl ItemsSource="{Binding Results}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <WrapPanel/>
+                        <design:ResponsiveTilePanel PreferredTileWidth="340" HorizontalGap="14" VerticalGap="14"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Style="{StaticResource CardStyle}" Width="340" MinHeight="142" Margin="0,0,14,14" Padding="16">
+                        <Border Style="{StaticResource CardStyle}" MinHeight="142" Padding="16">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="58"/>
@@ -168,7 +171,8 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" Margin="12,0,0,0">
                                     <TextBlock Text="{Binding DisplayTitle}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding DisplayDescription}" Margin="0,5,0,0" Height="38" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{DynamicResource TextSecondary}"/>
+                                    <TextBlock Text="{Binding AuthorLabel}" Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding DisplayDescription}" Margin="0,4,0,0" Height="38" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{DynamicResource TextSecondary}"/>
                                     <TextBlock Text="{Binding CategoriesLabel}" Margin="0,5,0,0" FontSize="11" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis"/>
                                     <DockPanel Margin="0,9,0,0">
                                         <TextBlock Text="{Binding DownloadsLabel, StringFormat={}{0} загрузок}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>

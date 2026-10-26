@@ -47,7 +47,9 @@ public sealed class CmlLibGameLoaderCatalog(IAppPaths paths, IHttpClientFactory 
                 LoadForgeAsync(launcher, minecraftVersion, cancellationToken));
             options.AddRange(loaderOptions);
 
-            _cache[minecraftVersion] = new CacheEntry(DateTimeOffset.UtcNow, options);
+            // Do not turn a temporary metadata outage into an hour-long "unsupported" result.
+            if (!options.Any(option => option.IsCatalogError))
+                _cache[minecraftVersion] = new CacheEntry(DateTimeOffset.UtcNow, options);
             return options;
         }
         finally { _gate.Release(); }
@@ -67,7 +69,7 @@ public sealed class CmlLibGameLoaderCatalog(IAppPaths paths, IHttpClientFactory 
             return LoadFabricAsyncResult(loader?.Version, loader?.Stable == true);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception) { return Unavailable("Fabric", "Fabric"); }
+        catch (Exception) { return CatalogError("Fabric", "Fabric"); }
     }
 
     private static async Task<GameLoaderOption> LoadQuiltAsync(HttpClient httpClient, string minecraftVersion, CancellationToken cancellationToken)
@@ -89,7 +91,7 @@ public sealed class CmlLibGameLoaderCatalog(IAppPaths paths, IHttpClientFactory 
                     loader.Stable ? $"Стабильная версия {loader.Version}." : $"Последняя доступная версия {loader.Version} (предварительная).");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception) { return Unavailable("Quilt", "Quilt"); }
+        catch (Exception) { return CatalogError("Quilt", "Quilt"); }
     }
 
     private static async Task<GameLoaderOption> LoadForgeAsync(MinecraftLauncher launcher, string minecraftVersion, CancellationToken cancellationToken)
@@ -107,7 +109,7 @@ public sealed class CmlLibGameLoaderCatalog(IAppPaths paths, IHttpClientFactory 
                     version.IsRecommendedVersion ? $"Рекомендуемая версия {version.ForgeVersionName}." : $"Доступна версия {version.ForgeVersionName}.");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception) { return Unavailable("Forge", "Forge"); }
+        catch (Exception) { return CatalogError("Forge", "Forge"); }
     }
 
     private static async Task<GameLoaderOption> LoadNeoForgeAsync(MinecraftLauncher launcher, string minecraftVersion, CancellationToken cancellationToken)
@@ -123,7 +125,7 @@ public sealed class CmlLibGameLoaderCatalog(IAppPaths paths, IHttpClientFactory 
                     $"Последняя доступная версия {version.NeoForgeVersionName}.");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception) { return Unavailable("NeoForge", "NeoForge"); }
+        catch (Exception) { return CatalogError("NeoForge", "NeoForge"); }
     }
 
     private MinecraftLauncher CreateLauncher(HttpClient httpClient)
@@ -142,7 +144,12 @@ public sealed class CmlLibGameLoaderCatalog(IAppPaths paths, IHttpClientFactory 
     }
 
     private static GameLoaderOption Unavailable(string id, string name) =>
-        new(id, name, null, false, $"{name} не поддерживает эту версию игры или каталог временно недоступен.");
+        new(id, name, null, false, $"Для этой версии Minecraft пока нет доступных сборок {name}.");
+
+    private static GameLoaderOption CatalogError(string id, string name) =>
+        new(id, name, null, false,
+            $"Не удалось проверить каталог {name}. Проверь подключение и обнови список загрузчиков.",
+            IsCatalogError: true);
 
     private static int CompareLoaderVersions(string left, string right)
     {

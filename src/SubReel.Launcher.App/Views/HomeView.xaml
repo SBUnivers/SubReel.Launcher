@@ -92,7 +92,7 @@
                 </ItemsControl>
             </ScrollViewer>
             <Border Grid.Row="3" Background="#171522" BorderBrush="{DynamicResource CardRaisedBackground}" BorderThickness="1" CornerRadius="14" Padding="16,12">
-                <DockPanel><Button DockPanel.Dock="Right" Content="Обновить манифест" Command="{Binding LoadVersionsCommand}" Padding="12,7"/><TextBlock Text="Vanilla · Fabric · NeoForge · Forge" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></DockPanel>
+                <DockPanel><Button DockPanel.Dock="Right" Content="Обновить манифест" Command="{Binding RefreshVersionsCommand}" Padding="12,7"/><TextBlock Text="{Binding VersionCatalogStatus}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,14,0"/></DockPanel>
             </Border>
         </Grid>
 
@@ -115,10 +115,20 @@
                     <TextBlock Text="ВЕРСИЯ MINECRAFT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                     <TextBlock Text="Точная версия" FontSize="21" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,5,0,14"/>
                     <ListBox x:Name="ExactVersionList" ItemsSource="{Binding ExactVersions}" SelectedValuePath="Id" SelectedValue="{Binding SelectedVersion, Mode=TwoWay}" ItemContainerStyle="{StaticResource VersionOption}" Background="Transparent" BorderThickness="0" MaxHeight="360">
-                        <ListBox.ItemTemplate><DataTemplate><DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Border Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="7,3" Margin="0,0,5,0" Visibility="{Binding IsLatest, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="LATEST" FontSize="8" Foreground="#100D19" FontWeight="Bold"/></Border><Border Background="#27243A" CornerRadius="8" Padding="7,3" Visibility="{Binding IsSnapshot, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="SNAPSHOT" FontSize="8" Foreground="{DynamicResource AccentBrush}"/></Border></StackPanel><TextBlock Text="{Binding Id}" VerticalAlignment="Center"/></DockPanel></DataTemplate></ListBox.ItemTemplate>
+                        <ListBox.ItemTemplate><DataTemplate><DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Border Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="7,3" Margin="0,0,5,0" Visibility="{Binding IsLatest, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="LATEST" FontSize="8" Foreground="#100D19" FontWeight="Bold"/></Border><Border Background="#27243A" CornerRadius="8" Padding="7,3" Margin="0,0,5,0" Visibility="{Binding IsSnapshot, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="SNAPSHOT" FontSize="8" Foreground="{DynamicResource AccentBrush}"/></Border><Border Background="#34303F" CornerRadius="8" Padding="7,3" Visibility="{Binding IsLegacy, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="{Binding ChannelLabel}" FontSize="8" Foreground="{DynamicResource TextSecondary}"/></Border></StackPanel><TextBlock Text="{Binding Id}" VerticalAlignment="Center"/></DockPanel></DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Margin="12,24,24,24" VerticalAlignment="Center">
+                    <TextBlock Text="СБОРКА" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                    <ComboBox ItemsSource="{Binding Instances}"
+                              SelectedItem="{Binding SelectedInstance, Mode=TwoWay}"
+                              DisplayMemberPath="DisplayName"
+                              Background="#171522"
+                              Foreground="{StaticResource TextPrimary}"
+                              BorderBrush="#3AFFFFFF"
+                              Padding="8,6"
+                              Margin="0,7,0,12"
+                              ToolTip="Выбери сохранённую сборку. Если не выбирать, лаунчер подберёт или создаст сборку для выбранной версии."/>
                     <TextBlock Text="ЗАПУСТИТЬ" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                     <TextBlock Text="Выбери загрузчик" FontSize="21" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,5,0,18"/>
                     <ListBox ItemsSource="{Binding LoaderOptions}" SelectedValuePath="Id" SelectedValue="{Binding SelectedLoader, Mode=TwoWay}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" SelectionMode="Single">

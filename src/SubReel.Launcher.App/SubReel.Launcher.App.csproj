@@ -16,10 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Новая папка\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="content\version-groups.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

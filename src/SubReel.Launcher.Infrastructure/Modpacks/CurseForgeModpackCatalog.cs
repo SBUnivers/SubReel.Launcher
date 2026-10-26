@@ -6,6 +6,7 @@ public sealed class CurseForgeModpackCatalog(ICurseForgeApiClient api) : IModpac
 {
     public string Id => "curseforge";
     public string DisplayName => "CurseForge";
+    public ModpackProvider Provider => ModpackProvider.CurseForge;
 
     public async Task<ModpackSearchPage> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default)
     {
@@ -24,7 +25,10 @@ public sealed class CurseForgeModpackCatalog(ICurseForgeApiClient api) : IModpac
                 var gameVersions = file.GameVersions.Where(value => !IsLoader(value)).ToArray();
                 var sha1 = file.Hashes.FirstOrDefault(hash => hash.Algorithm == 1)?.Value;
                 return new ModpackVersionSummary(file.Id.ToString(), file.DisplayName, file.Id.ToString(), gameVersions,
-                    loader is null ? [] : [loader], file.FileName, $"curseforge://{id}/{file.Id}", sha1);
+                    loader is null ? [] : [loader], file.FileName, $"curseforge://{id}/{file.Id}", sha1)
+                {
+                    PublishedAt = file.PublishedAt
+                };
             }).ToArray();
     }
 

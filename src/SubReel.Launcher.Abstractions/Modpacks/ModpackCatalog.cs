@@ -1,5 +1,11 @@
 namespace SubReel.Launcher.Abstractions.Modpacks;
 
+public enum ModpackProvider
+{
+    Modrinth,
+    CurseForge
+}
+
 public sealed record ModpackQuery(
     string Query = "",
     string? MinecraftVersion = null,
@@ -15,10 +21,16 @@ public sealed record ModpackSummary(
     string? IconUrl,
     long Downloads,
     IReadOnlyList<string> Categories,
-    string SourceId)
+    ModpackProvider Provider)
 {
+    public string? Author { get; init; }
     public string CategoriesLabel => string.Join(" · ", Categories.Take(3));
     public string DownloadsLabel => Downloads.ToString("N0");
+    public string ProviderLabel => Provider switch
+    {
+        ModpackProvider.CurseForge => "CurseForge",
+        _ => "Modrinth"
+    };
 }
 
 public sealed record ModpackSearchPage(
@@ -37,6 +49,12 @@ public sealed record ModpackVersionSummary(
     string? DownloadUrl,
     string? Sha1)
 {
+    public bool IsInstalled { get; init; }
+    public bool IsUpdateAvailable { get; init; }
+    public string? InstalledInstanceName { get; init; }
+    public DateTimeOffset? PublishedAt { get; init; }
+    public string InstallButtonLabel => IsInstalled ? "Установлено" : IsUpdateAvailable ? "Установить обновление" : "Установить";
+    public bool InstallActionEnabled => CanInstall && !IsInstalled;
     public string CompatibilityLabel =>
         $"Minecraft: {string.Join(", ", GameVersions.Take(4))}  ·  {string.Join(", ", Loaders)}";
     public bool CanInstall => !string.IsNullOrWhiteSpace(DownloadUrl) &&
@@ -46,7 +64,10 @@ public sealed record ModpackVersionSummary(
 public sealed record ModpackInstallProgress(string Message, double Fraction);
 public sealed record InstalledModpack(Guid InstanceId, string Name, string MinecraftVersion, string Loader, string? Warning = null);
 public sealed record CurseForgeModpackFile(int Id, int ProjectId, string DisplayName, string FileName, string? DownloadUrl,
-    long FileLength, IReadOnlyList<CurseForgeFileHash> Hashes, IReadOnlyList<string> GameVersions, bool IsAvailable);
+    long FileLength, IReadOnlyList<CurseForgeFileHash> Hashes, IReadOnlyList<string> GameVersions, bool IsAvailable)
+{
+    public DateTimeOffset? PublishedAt { get; init; }
+}
 public sealed record CurseForgeFileHash(string Value, int Algorithm);
 public sealed record CurseForgeSearchResults(IReadOnlyList<ModpackSummary> Items, int TotalHits);
 
@@ -55,6 +76,7 @@ public interface IModpackCatalog
 {
     string Id { get; }
     string DisplayName { get; }
+    ModpackProvider Provider { get; }
     Task<ModpackSearchPage> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ModpackVersionSummary>> GetVersionsAsync(string projectId, CancellationToken cancellationToken = default);
 }

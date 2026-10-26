@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using SubReel.Launcher.Abstractions.Paths;
 using SubReel.Launcher.Core.Instances;
 using SubReel.Launcher.Core.Models;
@@ -9,6 +10,7 @@ public sealed class JsonInstanceRepository : IInstanceRepository
 {
     private readonly string _filePath;
     private readonly string _instancesRoot;
+    private readonly ILogger<JsonInstanceRepository> _logger;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -16,11 +18,12 @@ public sealed class JsonInstanceRepository : IInstanceRepository
         WriteIndented = true
     };
 
-    public JsonInstanceRepository(IAppPaths paths)
+    public JsonInstanceRepository(IAppPaths paths, ILogger<JsonInstanceRepository> logger)
     {
         paths.EnsureCreated();
         _filePath = Path.Combine(paths.Data, "instances.json");
         _instancesRoot = Path.GetFullPath(paths.Instances);
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<MinecraftInstance>> GetAllAsync(
@@ -85,8 +88,12 @@ public sealed class JsonInstanceRepository : IInstanceRepository
             else
                 instances.Add(instance);
 
-            await WriteAllCoreAsync(instances, cancellationToken);
+            // Resolve and validate the per-instance location before either file is
+            // changed. Write the manifest first so an invalid path cannot leave a
+            // catalog entry that points to nowhere.
+            _ = GetInstanceDirectory(instance);
             await WriteInstanceManifestAsync(instance, cancellationToken);
+            await WriteAllCoreAsync(instances, cancellationToken);
         }
         finally
         {
@@ -124,19 +131,57 @@ public sealed class JsonInstanceRepository : IInstanceRepository
         if (!File.Exists(_filePath))
             return [];
 
-        await using var stream = new FileStream(
-            _filePath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 4096,
-            useAsync: true);
+        try
+        {
+            await using var stream = new FileStream(
+                _filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 4096,
+                useAsync: true);
 
-        return await JsonSerializer.DeserializeAsync<List<MinecraftInstance>>(
-                   stream,
-                   JsonOptions,
-                   cancellationToken)
-               ?? [];
+            var instances = await JsonSerializer.DeserializeAsync<List<MinecraftInstance>>(
+                stream,
+                JsonOptions,
+                cancellationToken);
+            if (instances is not null)
+            {
+                // Older JSON files can contain null rows, empty IDs, or duplicate
+                // IDs after interrupted/manual edits. Keep the first valid record
+                // for each ID so callers never get ambiguous instance selection.
+                var seenIds = new HashSet<Guid>();
+                var validInstances = new List<MinecraftInstance>(instances.Count);
+                var rejectedCount = 0;
+
+                foreach (var instance in instances)
+                {
+                    if (instance is null || instance.Id == Guid.Empty || !seenIds.Add(instance.Id))
+                    {
+                        rejectedCount++;
+                        continue;
+                    }
+
+                    validInstances.Add(instance);
+                }
+
+                if (rejectedCount > 0)
+                    _logger.LogWarning(
+                        "При чтении списка инстансов пропущено {RejectedCount} пустых или повторяющихся записей; исходный JSON сохранён",
+                        rejectedCount);
+
+                return validInstances;
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Не удалось прочитать список игровых инстансов; файл будет сохранён для восстановления");
+        }
+
+        var backupPath = $"{_filePath}.corrupt-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
+        File.Move(_filePath, backupPath);
+        _logger.LogWarning("Повреждённый список инстансов перемещён в {BackupPath}; создан пустой список", backupPath);
+        return [];
     }
 
     private async Task WriteAllCoreAsync(

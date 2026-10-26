@@ -17,7 +17,8 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
         MinecraftLoaderType loaderType,
         string? loaderVersion,
         int memoryMb,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool isModpackInstall = false)
     {
         name = name.Trim();
         minecraftVersion = minecraftVersion.Trim();
@@ -63,6 +64,7 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
             LoaderType = loaderType,
             LoaderVersion = loaderVersion,
             MemoryMb = memoryMb,
+            InstallState = isModpackInstall ? InstanceInstallState.Installing : InstanceInstallState.Ready,
             GameDirectory = Path.Combine(instanceRoot, "game")
         };
 
@@ -84,6 +86,87 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
             throw;
         }
     }
+
+    /// <summary>Removes modpack instances left in an incomplete install state after an unclean process exit.</summary>
+    public async Task<int> RecoverInterruptedModpackInstallsAsync(CancellationToken cancellationToken = default)
+    {
+        CleanupInterruptedInstallStaging(cancellationToken);
+        var interrupted = (await repository.GetAllAsync(cancellationToken))
+            .Where(instance => instance.InstallState == InstanceInstallState.Installing)
+            .ToArray();
+        var recovered = 0;
+        foreach (var instance in interrupted)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await DeleteAsync(instance.Id, deleteFiles: true, cancellationToken);
+            recovered++;
+        }
+        return recovered;
+    }
+
+    private void CleanupInterruptedInstallStaging(CancellationToken cancellationToken)
+    {
+        var cacheRoot = Path.GetFullPath(paths.Cache);
+        if (!Directory.Exists(cacheRoot) || IsReparsePoint(cacheRoot)) return;
+
+        var modrinthRoot = Path.Combine(cacheRoot, "modrinth-install");
+        if (Directory.Exists(modrinthRoot) && !IsReparsePoint(modrinthRoot))
+        {
+            foreach (var directory in Directory.EnumerateDirectories(modrinthRoot, "*", SearchOption.TopDirectoryOnly))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (Guid.TryParseExact(Path.GetFileName(directory), "N", out _))
+                    TryDeleteStagingDirectory(modrinthRoot, directory);
+            }
+            TryDeleteEmptyStagingRoot(cacheRoot, modrinthRoot);
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(cacheRoot, "curseforge-import-*", SearchOption.TopDirectoryOnly))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var name = Path.GetFileName(directory);
+            const string prefix = "curseforge-import-";
+            if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                Guid.TryParseExact(name[prefix.Length..], "N", out _))
+                TryDeleteStagingDirectory(cacheRoot, directory);
+        }
+    }
+
+    private static void TryDeleteEmptyStagingRoot(string cacheRoot, string stagingRoot)
+    {
+        try
+        {
+            if (IsDirectChild(cacheRoot, stagingRoot) && !IsReparsePoint(stagingRoot) &&
+                !Directory.EnumerateFileSystemEntries(stagingRoot).Any())
+                Directory.Delete(stagingRoot);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static void TryDeleteStagingDirectory(string cacheRoot, string directory)
+    {
+        try
+        {
+            if (IsDirectChild(cacheRoot, directory) && Directory.Exists(directory) && !IsReparsePoint(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static bool IsDirectChild(string parent, string candidate)
+    {
+        var fullParent = Path.GetFullPath(parent);
+        var fullCandidate = Path.GetFullPath(candidate);
+        var relative = Path.GetRelativePath(fullParent, fullCandidate);
+        return !Path.IsPathRooted(relative) && relative != "." &&
+            !relative.Contains(Path.DirectorySeparatorChar) && !relative.Contains(Path.AltDirectorySeparatorChar) &&
+            !relative.StartsWith("..", StringComparison.Ordinal);
+    }
+
+    private static bool IsReparsePoint(string path) =>
+        (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
 
     public async Task UpdateAsync(
         MinecraftInstance instance,
@@ -126,8 +209,50 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
         await repository.SaveAsync(instance, cancellationToken);
     }
 
+    public async Task<MinecraftInstance> DuplicateAsync(
+        MinecraftInstance source,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var suffix = " (копия)";
+        var baseName = source.Name.Length + suffix.Length <= 60
+            ? source.Name
+            : source.Name[..(60 - suffix.Length)];
+        var duplicate = await CreateAsync(
+            baseName + suffix,
+            source.MinecraftVersion,
+            source.LoaderType,
+            source.LoaderVersion,
+            source.MemoryMb,
+            cancellationToken);
+
+        try
+        {
+            duplicate.IconPath = source.IconPath;
+            duplicate.JavaPath = source.JavaPath;
+            duplicate.JvmArguments = source.JvmArguments;
+            duplicate.Source = "Manual";
+            await UpdateAsync(duplicate, cancellationToken);
+            return duplicate;
+        }
+        catch
+        {
+            await repository.DeleteAsync(duplicate.Id, CancellationToken.None);
+            if (Directory.Exists(duplicate.GameDirectory) && !Directory.EnumerateFileSystemEntries(duplicate.GameDirectory).Any())
+                Directory.Delete(duplicate.GameDirectory);
+            var root = Path.GetDirectoryName(duplicate.GameDirectory);
+            if (root is not null && Directory.Exists(root) && !Directory.EnumerateFileSystemEntries(root).Any())
+                Directory.Delete(root);
+            throw;
+        }
+    }
+
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken) =>
+        DeleteAsync(id, deleteFiles: false, cancellationToken);
+
     public async Task DeleteAsync(
         Guid id,
+        bool deleteFiles = false,
         CancellationToken cancellationToken = default)
     {
         var instance = await repository.GetByIdAsync(
@@ -137,8 +262,31 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
         if (instance is null)
             return;
 
-        // Пока удаляем запись из каталога сборок, но сохраняем
-        // игровые файлы, чтобы случайно не потерять данные.
+        if (deleteFiles)
+            DeleteInstanceFiles(instance);
+
         await repository.DeleteAsync(id, cancellationToken);
+    }
+
+    private void DeleteInstanceFiles(MinecraftInstance instance)
+    {
+        var instancesRoot = Path.GetFullPath(paths.Instances);
+        var instanceRoot = Path.GetFullPath(Path.Combine(instancesRoot, instance.Id.ToString("N")));
+        var rootRelative = Path.GetRelativePath(instancesRoot, instanceRoot);
+        if (!string.Equals(rootRelative, instance.Id.ToString("N"), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Путь инстанса не прошёл проверку безопасности.");
+
+        var gameDirectory = Path.GetFullPath(instance.GameDirectory);
+        var gameRelative = Path.GetRelativePath(instanceRoot, gameDirectory);
+        if (Path.IsPathRooted(gameRelative) || gameRelative == "." || gameRelative == ".." ||
+            gameRelative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            gameRelative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
+            throw new InvalidOperationException("Игровая папка находится за пределами каталога этого инстанса. Файлы не удалены.");
+
+        if (!Directory.Exists(instanceRoot)) return;
+        if ((File.GetAttributes(instanceRoot) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("Каталог инстанса является ссылкой. Рекурсивное удаление отменено.");
+
+        Directory.Delete(instanceRoot, recursive: true);
     }
 }

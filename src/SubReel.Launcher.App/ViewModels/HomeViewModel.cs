@@ -11,13 +11,16 @@ using SubReel.Launcher.Abstractions.Game;
 using SubReel.Launcher.Abstractions.Settings;
 using SubReel.Launcher.App.DesignSystem;
 using SubReel.Launcher.Core.Instances;
+using SubReel.Launcher.Core.Launching;
 using SubReel.Launcher.Core.Models;
 
 namespace SubReel.Launcher.App.ViewModels;
 
-public sealed record MinecraftVersionOption(string Id, bool IsSnapshot, bool IsLatest)
+public sealed record MinecraftVersionOption(string Id, bool IsSnapshot, bool IsLatest, string Channel = "release")
 {
-    public string Label => IsSnapshot ? $"{Id}  ·  snapshot" : Id;
+    public bool IsLegacy => Channel.Equals("old_alpha", StringComparison.OrdinalIgnoreCase) || Channel.Equals("old_beta", StringComparison.OrdinalIgnoreCase);
+    public string ChannelLabel => Channel.ToUpperInvariant().Replace('_', ' ');
+    public string Label => IsSnapshot ? $"{Id}  ·  snapshot" : IsLegacy ? $"{Id}  ·  {ChannelLabel}" : Id;
 }
 
 public sealed record MinecraftReleaseFamily(string Id, string Name, string Accent, string Tagline, IReadOnlyList<MinecraftVersionOption> Versions, Uri? ArtUri = null)
@@ -30,28 +33,30 @@ public partial class HomeViewModel : ObservableObject
 {
     private static readonly string[] LoaderIds = ["Vanilla", "Fabric", "Quilt", "NeoForge", "Forge"];
     private readonly IGameVersionCatalog _catalog;
-    private readonly IGameService _game;
+    private readonly ILaunchOrchestrator _launchOrchestrator;
     private readonly IGameLoaderCatalog _loaderCatalog;
     private readonly IGameAuthService _auth;
     private readonly IThemeService _theme;
     private readonly ISettingsService _settings;
     private readonly InstanceService _instances;
     private readonly ILogger<HomeViewModel> _logger;
-    private readonly SemaphoreSlim _settingsGate = new(1, 1);
     private bool _restoringSelection;
     private CancellationTokenSource? _launchCancellation;
 
     public ObservableCollection<MinecraftReleaseFamily> Families { get; } = [];
     public ObservableCollection<MinecraftVersionOption> ExactVersions { get; } = [];
+    public ObservableCollection<MinecraftInstance> Instances { get; } = [];
     public ObservableCollection<GameLoaderOption> LoaderOptions { get; } =
     [
         new GameLoaderOption("Vanilla", "Vanilla", null, true, "Доступно для выбранной версии.")
     ];
 
     [ObservableProperty] private MinecraftReleaseFamily? _selectedFamily;
+    [ObservableProperty] private MinecraftInstance? _selectedInstance;
     [ObservableProperty] private string _selectedVersion = "";
     [ObservableProperty] private string _selectedLoader = "Vanilla";
     [ObservableProperty] private string _statusText = "Загружаю официальный список версий Minecraft…";
+    [ObservableProperty] private string _versionCatalogStatus = "Загружаю версии Minecraft…";
     [ObservableProperty] private string _loaderCatalogStatus = "Выбери версию игры, чтобы проверить загрузчики.";
     [ObservableProperty] private string _selectedAccent = "#8875FF";
     [ObservableProperty] private bool _isBusy;
@@ -59,11 +64,11 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty] private double _launchProgress;
     public string SelectedVersionSummary => string.IsNullOrEmpty(SelectedVersion) ? "Выбери версию слева." : $"Будет подготовлена версия {SelectedVersion}";
 
-    public HomeViewModel(IGameVersionCatalog catalog, IGameLoaderCatalog loaderCatalog, IGameService game, IGameAuthService auth, IThemeService theme, ISettingsService settings, InstanceService instances, ILogger<HomeViewModel> logger)
+    public HomeViewModel(IGameVersionCatalog catalog, IGameLoaderCatalog loaderCatalog, ILaunchOrchestrator launchOrchestrator, IGameAuthService auth, IThemeService theme, ISettingsService settings, InstanceService instances, ILogger<HomeViewModel> logger)
     {
         _catalog = catalog;
         _loaderCatalog = loaderCatalog;
-        _game = game;
+        _launchOrchestrator = launchOrchestrator;
         _auth = auth;
         _theme = theme;
         _settings = settings;
@@ -89,6 +94,9 @@ public partial class HomeViewModel : ObservableObject
 
     partial void OnSelectedVersionChanged(string value)
     {
+        if (!_restoringSelection && SelectedInstance is not null &&
+            !string.Equals(SelectedInstance.MinecraftVersion, value, StringComparison.OrdinalIgnoreCase))
+            SelectedInstance = null;
         OnPropertyChanged(nameof(SelectedVersionSummary));
         QueueSaveSelection();
         if (!string.IsNullOrWhiteSpace(value)) _ = LoadLoaderOptionsAsync(value);
@@ -96,12 +104,42 @@ public partial class HomeViewModel : ObservableObject
 
     partial void OnSelectedLoaderChanged(string value)
     {
+        if (!_restoringSelection && SelectedInstance is not null &&
+            !SelectedInstance.LoaderType.ToString().Equals(value, StringComparison.OrdinalIgnoreCase))
+            SelectedInstance = null;
         OnPropertyChanged(nameof(SelectedLoaderVersion));
         QueueSaveSelection();
     }
 
+    partial void OnSelectedInstanceChanged(MinecraftInstance? value)
+    {
+        if (value is null) return;
+
+        var wasRestoringSelection = _restoringSelection;
+        _restoringSelection = true;
+        try
+        {
+            var matchingFamily = Families.FirstOrDefault(family =>
+                family.Versions.Any(version => version.Id == value.MinecraftVersion));
+            if (matchingFamily is not null && SelectedFamily?.Id != matchingFamily.Id)
+                SelectedFamily = matchingFamily;
+            if (!ExactVersions.Any(version => version.Id == value.MinecraftVersion))
+                ExactVersions.Insert(0, new MinecraftVersionOption(value.MinecraftVersion, false, false));
+            SelectedVersion = value.MinecraftVersion;
+            SelectedLoader = value.LoaderType.ToString();
+        }
+        finally
+        {
+            _restoringSelection = wasRestoringSelection;
+        }
+
+        _ = LoadLoaderOptionsAsync(value.MinecraftVersion);
+    }
+
     [RelayCommand]
-    private async Task LoadVersionsAsync()
+    private Task RefreshVersionsAsync() => LoadVersionsAsync(forceRefresh: true);
+
+    private async Task LoadVersionsAsync(bool forceRefresh = false)
     {
         if (IsBusy) return;
         try
@@ -109,36 +147,73 @@ public partial class HomeViewModel : ObservableObject
             IsBusy = true;
             _restoringSelection = true;
             var settings = await _settings.LoadAsync();
+            var savedInstances = await _instances.GetAllAsync();
+            Instances.Clear();
+            foreach (var instance in savedInstances) Instances.Add(instance);
             var presentations = await LoadVersionGroupPresentationsAsync();
-            var versions = await _catalog.GetVersionsAsync();
-            var releaseVersions = versions.Where(x => x.Type.Equals("release", StringComparison.OrdinalIgnoreCase) ||
-                (settings.IncludeSnapshots && x.Type.Equals("snapshot", StringComparison.OrdinalIgnoreCase)));
-            foreach (var group in releaseVersions.GroupBy(x => x.Type.Equals("snapshot", StringComparison.OrdinalIgnoreCase) ? "snapshots" : FamilyKey(x.Id))
+            var versions = forceRefresh
+                ? await _catalog.RefreshVersionsAsync()
+                : await _catalog.GetVersionsAsync();
+            var updatedAt = _catalog.LastManifestUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+            VersionCatalogStatus = _catalog.IsOfflineFallback
+                ? $"Нет соединения с Mojang · локальный кэш от {updatedAt ?? "неизвестной даты"}"
+                : _catalog.IsUsingCachedManifest
+                    ? $"Локальный кэш версий · обновлён {updatedAt ?? "неизвестная дата"}"
+                    : $"Манифест Mojang обновлён {updatedAt ?? "сейчас"}";
+            var visibleVersions = versions.Where(x =>
+                x.Type.Equals("release", StringComparison.OrdinalIgnoreCase) ||
+                (settings.IncludeSnapshots && x.Type.Equals("snapshot", StringComparison.OrdinalIgnoreCase)) ||
+                (settings.IncludeLegacyVersions && IsLegacyChannel(x.Type)));
+            foreach (var group in visibleVersions.GroupBy(x => GroupKey(x.Type, x.Id))
                          .OrderBy(g => presentations.TryGetValue(g.Key, out var presentation) ? presentation.Order : int.MaxValue)
-                         .ThenByDescending(g => VersionSortKey(g.Key)).Take(8))
+                         .ThenByDescending(g => VersionSortKey(g.Key)))
             {
                 var key = group.Key;
+                var groupChannel = group.First().Type;
                 var details = presentations.TryGetValue(key, out var known)
                     ? known
-                    : new VersionGroupPresentation(key == "snapshots" ? "Снапшоты" : key,
-                        key == "snapshots" ? "ТЕСТОВЫЕ ВЕРСИИ" : "MINECRAFT UPDATE", null, "#8875FF", int.MaxValue);
-                var ordered = group.OrderByDescending(x => x.Type.Equals("release", StringComparison.OrdinalIgnoreCase))
-                    .ThenByDescending(x => x.ReleaseTime).Take(30).ToArray();
-                var options = ordered.Select((x, index) => new MinecraftVersionOption(x.Id, x.Type.Equals("snapshot", StringComparison.OrdinalIgnoreCase), index == 0))
+                    : new VersionGroupPresentation(key switch
+                        {
+                            "snapshots" => "Снапшоты",
+                            "legacy-alpha" => "Старые Alpha",
+                            "legacy-beta" => "Старые Beta",
+                            _ => key
+                        },
+                        key == "snapshots" ? "ТЕСТОВЫЕ ВЕРСИИ" : IsLegacyChannel(groupChannel) ? "ЭКСПЕРИМЕНТАЛЬНЫЕ ВЕРСИИ" : "MINECRAFT UPDATE",
+                        null, "#8875FF", int.MaxValue);
+                var ordered = group.OrderByDescending(x => x.ReleaseTime).Take(30).ToArray();
+                var options = ordered.Select((x, index) => new MinecraftVersionOption(
+                        x.Id,
+                        x.Type.Equals("snapshot", StringComparison.OrdinalIgnoreCase),
+                        index == 0 && x.Type.Equals("release", StringComparison.OrdinalIgnoreCase),
+                        x.Type))
                     .ToArray();
                 if (options.Length > 0)
                     Families.Add(new MinecraftReleaseFamily(key, details.Title, details.Accent, details.Subtitle, options, ResolveArtUri(details.Art)));
             }
-            SelectedFamily = Families.FirstOrDefault(x => x.Id == settings.LastSelectedVersionGroup) ?? Families.FirstOrDefault();
-            if (SelectedFamily is not null && ExactVersions.Any(x => x.Id == settings.LastSelectedMinecraftVersion))
+            var savedInstance = settings.LastPlayedInstanceId is { } lastPlayedId
+                ? savedInstances.FirstOrDefault(x => x.Id == lastPlayedId)
+                : null;
+            var savedInstanceFamily = savedInstance is null
+                ? null
+                : Families.FirstOrDefault(family => family.Versions.Any(version => version.Id == savedInstance.MinecraftVersion));
+            SelectedFamily = savedInstanceFamily
+                ?? Families.FirstOrDefault(x => x.Id == settings.LastSelectedVersionGroup)
+                ?? Families.FirstOrDefault();
+            if (savedInstance is not null)
+                SelectedInstance = savedInstance;
+            else if (SelectedFamily is not null && ExactVersions.Any(x => x.Id == settings.LastSelectedMinecraftVersion))
                 SelectedVersion = settings.LastSelectedMinecraftVersion!;
-            if (LoaderIds.Contains(settings.LastSelectedLoader, StringComparer.OrdinalIgnoreCase))
+            if (savedInstance is not null && LoaderIds.Contains(savedInstance.LoaderType.ToString(), StringComparer.OrdinalIgnoreCase))
+                SelectedLoader = LoaderIds.First(x => x.Equals(savedInstance.LoaderType.ToString(), StringComparison.OrdinalIgnoreCase));
+            else if (LoaderIds.Contains(settings.LastSelectedLoader, StringComparer.OrdinalIgnoreCase))
                 SelectedLoader = LoaderIds.First(x => x.Equals(settings.LastSelectedLoader, StringComparison.OrdinalIgnoreCase));
             StatusText = Families.Count == 0 ? "Не удалось найти доступные релизы Minecraft." : "Список версий обновлён из манифеста Minecraft.";
         }
         catch (Exception ex)
         {
             StatusText = $"Не удалось загрузить манифест Minecraft: {ex.Message}";
+            VersionCatalogStatus = "Не удалось получить манифест; корректного локального кэша нет.";
         }
         finally { _restoringSelection = false; IsBusy = false; }
     }
@@ -170,12 +245,16 @@ public partial class HomeViewModel : ObservableObject
                 throw new InvalidOperationException($"Неизвестный загрузчик: {SelectedLoader}.");
             var loaderVersion = LoaderOptions.FirstOrDefault(x => x.Id == SelectedLoader)?.Version;
             var instances = await _instances.GetAllAsync(launchCancellation.Token);
-            var instance = instances.FirstOrDefault(x => x.MinecraftVersion == SelectedVersion && x.LoaderType == loaderType);
+            var instance = SelectedInstance is { } selectedInstance &&
+                           selectedInstance.MinecraftVersion == SelectedVersion && selectedInstance.LoaderType == loaderType
+                ? selectedInstance
+                : instances.FirstOrDefault(x => x.MinecraftVersion == SelectedVersion && x.LoaderType == loaderType);
             if (instance is null)
             {
                 instance = await _instances.CreateAsync(
                     $"Minecraft {SelectedVersion}", SelectedVersion, loaderType, loaderVersion,
                     settings.DefaultMemoryMb, launchCancellation.Token);
+                Instances.Add(instance);
             }
             else if (loaderType == MinecraftLoaderType.Quilt && !string.IsNullOrWhiteSpace(loaderVersion) &&
                      !string.Equals(instance.LoaderVersion, loaderVersion, StringComparison.Ordinal))
@@ -185,18 +264,16 @@ public partial class HomeViewModel : ObservableObject
                 instance.LoaderVersion = loaderVersion;
                 await _instances.UpdateAsync(instance, launchCancellation.Token);
             }
+            SelectedInstance = instance;
             var session = await _auth.GetActiveSessionAsync(launchCancellation.Token);
             var playerName = _auth.ActiveAccount?.Username ?? session?.Username ?? "SubReelPlayer";
-            var request = new GameLaunchRequest(
-                instance.GameDirectory, SelectedVersion, instance.MemoryMb,
-                playerName, session,
-                SelectedLoader, instance.LoaderVersion ?? loaderVersion, instance.Id, instance.JavaPath, instance.JvmArguments);
-            var progress = new Progress<GameInstallProgress>(value =>
+            var progress = new Progress<LaunchProgress>(value =>
             {
-                StatusText = value.Stage;
+                StatusText = value.Message;
                 LaunchProgress = value.Fraction * 100;
             });
-            Process process = await _game.LaunchAsync(request, progress, launchCancellation.Token);
+            Process process = await _launchOrchestrator.LaunchAsync(
+                instance, session, playerName, progress, launchCancellation.Token);
             LaunchProgress = 100;
             StatusText = $"Minecraft {SelectedVersion} запущен (PID {process.Id}).";
             _ = RecordPlayTimeAsync(process, instance);
@@ -250,17 +327,16 @@ public partial class HomeViewModel : ObservableObject
 
     private async Task SaveSelectionAsync()
     {
-        await _settingsGate.WaitAsync();
         try
         {
-            var settings = await _settings.LoadAsync();
-            settings.LastSelectedVersionGroup = SelectedFamily?.Id;
-            settings.LastSelectedMinecraftVersion = SelectedVersion;
-            settings.LastSelectedLoader = SelectedLoader;
-            await _settings.SaveAsync(settings);
+            await _settings.UpdateAsync(settings =>
+            {
+                settings.LastSelectedVersionGroup = SelectedFamily?.Id;
+                settings.LastSelectedMinecraftVersion = SelectedVersion;
+                settings.LastSelectedLoader = SelectedLoader;
+            });
         }
         catch (Exception ex) { StatusText = $"Не удалось сохранить выбор версии: {ex.Message}"; }
-        finally { _settingsGate.Release(); }
     }
 
     private async Task LoadLoaderOptionsAsync(string minecraftVersion)
@@ -273,19 +349,52 @@ public partial class HomeViewModel : ObservableObject
 
             LoaderOptions.Clear();
             foreach (var option in options) LoaderOptions.Add(option);
+            KeepSelectedInstanceLoaderAvailable(minecraftVersion);
             if (!LoaderOptions.Any(x => x.Id == SelectedLoader && x.IsAvailable))
                 SelectedLoader = "Vanilla";
             OnPropertyChanged(nameof(SelectedLoaderVersion));
-            LoaderCatalogStatus = "Список загрузчиков обновлён.";
+            var unavailableOptions = options.Where(option => !option.IsAvailable).ToArray();
+            LoaderCatalogStatus = unavailableOptions.Length == 0
+                ? "Совместимость загрузчиков проверена."
+                : "Недоступные варианты: " + string.Join(" ", unavailableOptions.Select(option =>
+                    $"{option.Name}: {option.AvailabilityMessage}"));
         }
         catch (Exception ex)
         {
             if (!string.Equals(minecraftVersion, SelectedVersion, StringComparison.Ordinal)) return;
             LoaderOptions.Clear();
             LoaderOptions.Add(new GameLoaderOption("Vanilla", "Vanilla", null, true, "Доступно для выбранной версии."));
-            SelectedLoader = "Vanilla";
+            KeepSelectedInstanceLoaderAvailable(minecraftVersion);
+            if (!LoaderOptions.Any(x => x.Id == SelectedLoader && x.IsAvailable))
+                SelectedLoader = "Vanilla";
             LoaderCatalogStatus = $"Не удалось проверить загрузчики: {ex.Message}. Vanilla остаётся доступна.";
         }
+    }
+
+    private void KeepSelectedInstanceLoaderAvailable(string minecraftVersion)
+    {
+        if (SelectedInstance is not { } instance ||
+            !instance.MinecraftVersion.Equals(minecraftVersion, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var loaderId = instance.LoaderType.ToString();
+        var option = LoaderOptions.FirstOrDefault(item => item.Id.Equals(loaderId, StringComparison.OrdinalIgnoreCase));
+        if (option is null)
+        {
+            LoaderOptions.Add(new GameLoaderOption(loaderId, loaderId, instance.LoaderVersion, true,
+                "Используется установленный загрузчик выбранной сборки."));
+        }
+        else if (!option.IsAvailable)
+        {
+            var index = LoaderOptions.IndexOf(option);
+            LoaderOptions[index] = option with
+            {
+                IsAvailable = true,
+                AvailabilityMessage = "Используется установленный загрузчик выбранной сборки."
+            };
+        }
+
+        SelectedLoader = loaderId;
     }
 
     public string? SelectedLoaderVersion => LoaderOptions.FirstOrDefault(x => x.Id == SelectedLoader)?.Version;
@@ -313,6 +422,18 @@ public partial class HomeViewModel : ObservableObject
             return first >= 20 ? parts[0] : $"{parts[0]}.{parts[1]}";
         return id;
     }
+
+    private static string GroupKey(string channel, string id) => channel.ToLowerInvariant() switch
+    {
+        "snapshot" => "snapshots",
+        "old_alpha" => "legacy-alpha",
+        "old_beta" => "legacy-beta",
+        _ => FamilyKey(id)
+    };
+
+    private static bool IsLegacyChannel(string channel) =>
+        channel.Equals("old_alpha", StringComparison.OrdinalIgnoreCase) ||
+        channel.Equals("old_beta", StringComparison.OrdinalIgnoreCase);
 
     private static double VersionSortKey(string value)
     {

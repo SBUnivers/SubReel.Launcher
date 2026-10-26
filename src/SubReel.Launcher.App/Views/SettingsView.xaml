@@ -12,6 +12,7 @@
                     <ComboBox ItemsSource="{Binding BackdropOptions}" SelectedItem="{Binding SelectedWindowBackdrop, UpdateSourceTrigger=PropertyChanged}" Width="180" HorizontalAlignment="Left"/>
                     <CheckBox Content="Меньше анимаций" IsChecked="{Binding ReduceAnimations, UpdateSourceTrigger=PropertyChanged}" Margin="0,14,0,0"/>
                     <CheckBox Content="Показывать снапшоты Minecraft" IsChecked="{Binding IncludeSnapshots, UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,0"/>
+                    <CheckBox Content="Показывать старые alpha/beta версии" IsChecked="{Binding IncludeLegacyVersions, UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,0"/>
                     <TextBlock Text="Язык каталога" Foreground="{DynamicResource TextSecondary}" Margin="0,14,0,5"/>
                     <ComboBox ItemsSource="{Binding LanguageOptions}" DisplayMemberPath="Name" SelectedValuePath="Code" SelectedValue="{Binding SelectedLanguage, UpdateSourceTrigger=PropertyChanged}" Width="180" HorizontalAlignment="Left"/>
                     <TextBlock Text="{Binding CatalogLanguageStatus}" Foreground="{DynamicResource TextSecondary}" Margin="0,6,0,0" TextWrapping="Wrap"/>
@@ -20,18 +21,7 @@
             <Border Style="{StaticResource CardStyle}" MaxWidth="720" HorizontalAlignment="Left" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="Перевод описаний модпаков" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
-                    <TextBlock Text="На русском каталог переводится автоматически. На английском показывается оригинал. Для перевода описаний нужен ключ DeepL API Free; он хранится локально и отправляется DeepL только при поиске." Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,6,0,12"/>
-                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,12">
-                        <Run Text="Как получить ключ: 1) " Foreground="{DynamicResource TextSecondary}"/>
-                        <Hyperlink NavigateUri="https://www.deepl.com/pro-api" RequestNavigate="OpenDeepL_Click">откройте планы DeepL API</Hyperlink>
-                        <Run Text="; 2) выберите API Free и зарегистрируйтесь; 3) откройте API Keys &amp; Limits, скопируйте ключ и вставьте ниже. Для API может потребоваться отдельная регистрация, даже если у вас есть аккаунт переводчика DeepL." Foreground="{DynamicResource TextSecondary}"/>
-                    </TextBlock>
-                    <PasswordBox x:Name="TranslationKeyBox" Width="360" HorizontalAlignment="Left" Padding="10,8" ToolTip="DeepL API key"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                        <Button Content="Сохранить ключ" Click="SaveTranslationKey_Click" Padding="12,8" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0"/>
-                        <Button Content="Удалить ключ" Command="{Binding RemoveTranslationKeyCommand}" Padding="12,8" Margin="8,0,0,0"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding TranslationKeyStatus}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                    <TextBlock Text="Русские описания переводятся через SubReel Platform. API-ключ DeepL хранится только на сервере. Для перевода нужно войти в аккаунт SubReel; повторные переводы берутся из локального кэша." Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="24" MaxWidth="720" HorizontalAlignment="Left">

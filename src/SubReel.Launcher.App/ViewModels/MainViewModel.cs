@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SubReel.Launcher.App.Navigation;
 using SubReel.Launcher.Abstractions.Game;
+using SubReel.Launcher.Core.Launching;
+using System.Windows.Threading;
 
 namespace SubReel.Launcher.App.ViewModels;
 
@@ -10,6 +12,9 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly INavigationService _navigation;
     private readonly IGameAuthService _auth;
+    private readonly ILaunchOrchestrator _launchOrchestrator;
+    private readonly DispatcherTimer _statusResetTimer;
+    private string? _gameStatus;
 
     public ObservableCollection<LauncherAccount> Accounts { get; } = [];
 
@@ -22,7 +27,7 @@ public partial class MainViewModel : ObservableObject
     public string PageTitle =>
         _navigation.CurrentItem?.Title ?? "SubReel Launcher";
 
-    public string StatusText => $"Раздел: {PageTitle}";
+    public string StatusText => _gameStatus ?? $"Раздел: {PageTitle}";
 
     public string AccountText => _auth.ActiveAccount is { } account
         ? account.Type == LauncherAccountType.Offline ? $"{account.Username} · офлайн · без лицензии" : account.Username
@@ -31,12 +36,61 @@ public partial class MainViewModel : ObservableObject
     public bool CanSignIn => true;
     public bool CanSignInMicrosoft => true;
 
-    public MainViewModel(INavigationService navigation, IGameAuthService auth)
+    public MainViewModel(INavigationService navigation, IGameAuthService auth, ILaunchOrchestrator launchOrchestrator)
     {
         _navigation = navigation;
         _auth = auth;
+        _launchOrchestrator = launchOrchestrator;
+        _statusResetTimer = new DispatcherTimer();
+        _statusResetTimer.Tick += (_, _) =>
+        {
+            _statusResetTimer.Stop();
+            _gameStatus = BuildActiveGameStatus();
+            OnPropertyChanged(nameof(StatusText));
+        };
+        _launchOrchestrator.StatusChanged += OnLaunchStatusChanged;
         _navigation.PropertyChanged += OnNavigationPropertyChanged;
         RefreshAccounts();
+    }
+
+    private void OnLaunchStatusChanged(LaunchStatus status)
+    {
+        void Update()
+        {
+            var isTerminal = status.State is LaunchState.Exited or LaunchState.Crashed or LaunchState.Canceled or LaunchState.Failed;
+            if (isTerminal)
+            {
+                _gameStatus = status.CrashReportPath is null
+                    ? $"{status.InstanceName}: {status.Message}"
+                    : $"{status.InstanceName}: {status.Message} · {status.CrashReportPath}";
+                _statusResetTimer.Interval = status.State == LaunchState.Crashed
+                    ? TimeSpan.FromSeconds(20)
+                    : TimeSpan.FromSeconds(8);
+                _statusResetTimer.Stop();
+                _statusResetTimer.Start();
+            }
+            else
+            {
+                _statusResetTimer.Stop();
+                _gameStatus = BuildActiveGameStatus();
+            }
+            OnPropertyChanged(nameof(StatusText));
+        }
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) Update();
+        else dispatcher.BeginInvoke(Update);
+    }
+
+    private string? BuildActiveGameStatus()
+    {
+        var active = _launchOrchestrator.ActiveLaunches;
+        return active.Count switch
+        {
+            0 => null,
+            1 => $"Игра: {active.First().InstanceName} · {active.First().Message}",
+            _ => $"Запущено игр: {active.Count}"
+        };
     }
 
     public async Task RestoreAccountAsync()

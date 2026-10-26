@@ -23,6 +23,11 @@ public sealed class MinecraftInstance
 
     public string Source { get; set; } = "Manual";
 
+    /// <summary>Structured catalog metadata for an installed modpack. Null for manually created instances and older records.</summary>
+    public InstalledModpackManifest? ModpackManifest { get; set; }
+
+    public InstanceInstallState InstallState { get; set; } = InstanceInstallState.Ready;
+
     public string GameDirectory { get; set; } = "";
 
     public int MemoryMb { get; set; } = 4096;
@@ -36,4 +41,27 @@ public sealed class MinecraftInstance
 
     [JsonIgnore]
     public bool IsVanilla => LoaderType == MinecraftLoaderType.Vanilla;
+
+    [JsonIgnore]
+    public string DisplayName => $"{Name} · {MinecraftVersion} · {LoaderType}";
+}
+
+public enum InstanceInstallState
+{
+    Ready,
+    Installing
+}
+
+public sealed class InstalledModpackManifest
+{
+    public string Provider { get; set; } = "";
+    public string ProjectId { get; set; } = "";
+    public string ProjectSlug { get; set; } = "";
+    public string ProjectTitle { get; set; } = "";
+    public string VersionId { get; set; } = "";
+    public string VersionName { get; set; } = "";
+    public string MinecraftVersion { get; set; } = "";
+    public string Loader { get; set; } = "Vanilla";
+    public string? LoaderVersion { get; set; }
+    public DateTimeOffset InstalledAt { get; set; } = DateTimeOffset.UtcNow;
 }

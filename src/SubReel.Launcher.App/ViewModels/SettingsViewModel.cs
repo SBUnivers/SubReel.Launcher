@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using SubReel.Launcher.App.Services;
 using SubReel.Launcher.App.DesignSystem;
 using SubReel.Launcher.Abstractions.Settings;
-using SubReel.Launcher.Abstractions.Modpacks;
 
 namespace SubReel.Launcher.App.ViewModels;
 
@@ -13,7 +12,6 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ISettingsService _settings;
     private readonly IWindowBackdropService _backdrop;
     private readonly IMotionService _motion;
-    private readonly ITranslationKeyStore _translationKeys;
     private bool _settingsLoaded;
 
     public IReadOnlyList<string> BackdropOptions { get; } = Enum.GetNames<WindowBackdropMode>();
@@ -27,6 +25,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _includeSnapshots;
+
+    [ObservableProperty]
+    private bool _includeLegacyVersions;
 
     [ObservableProperty]
     private string _selectedLanguage = "ru-RU";
@@ -49,63 +50,17 @@ public partial class SettingsViewModel : ObservableObject
     private bool _isBusy;
 
     [ObservableProperty]
-    private bool _isTranslationKeyConfigured;
+    private string _catalogLanguageStatus = "Перевод каталога выполняется через SubReel Platform для вошедших пользователей.";
 
-    [ObservableProperty]
-    private string _translationKeyStatus = "Ключ DeepL ещё не добавлен.";
-
-    [ObservableProperty]
-    private string _catalogLanguageStatus = "Русский выбран — каталог переводится автоматически при поиске.";
-
-    public SettingsViewModel(IUpdateService updates, ISettingsService settings, IWindowBackdropService backdrop, IMotionService motion, ITranslationKeyStore translationKeys)
+    public SettingsViewModel(IUpdateService updates, ISettingsService settings, IWindowBackdropService backdrop, IMotionService motion)
     {
         _updates = updates;
         _settings = settings;
         _backdrop = backdrop;
         _motion = motion;
-        _translationKeys = translationKeys;
         _selectedWindowBackdrop = backdrop.Mode.ToString();
         _reduceAnimations = motion.Level != MotionLevel.Full;
         _ = LoadDisplaySettingsAsync();
-        _ = LoadTranslationKeyStatusAsync();
-    }
-
-    private async Task LoadTranslationKeyStatusAsync()
-    {
-        try
-        {
-            IsTranslationKeyConfigured = !string.IsNullOrWhiteSpace(await _translationKeys.GetAsync());
-            TranslationKeyStatus = IsTranslationKeyConfigured ? "Ключ хранится в защищённом виде на этом компьютере." : "Ключ DeepL ещё не добавлен.";
-        }
-        catch (Exception ex) { TranslationKeyStatus = $"Не удалось прочитать ключ переводчика: {ex.Message}"; }
-    }
-
-    public async Task SaveTranslationKeyAsync(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            TranslationKeyStatus = "Сначала вставьте ключ DeepL API.";
-            return;
-        }
-        try
-        {
-            await _translationKeys.SaveAsync(key);
-            IsTranslationKeyConfigured = true;
-            TranslationKeyStatus = "Ключ сохранён в защищённом виде на этом компьютере.";
-        }
-        catch (Exception ex) { TranslationKeyStatus = $"Не удалось сохранить ключ: {ex.Message}"; }
-    }
-
-    [RelayCommand]
-    private async Task RemoveTranslationKeyAsync()
-    {
-        try
-        {
-            await _translationKeys.SaveAsync(null);
-            IsTranslationKeyConfigured = false;
-            TranslationKeyStatus = "Ключ переводчика удалён.";
-        }
-        catch (Exception ex) { TranslationKeyStatus = $"Не удалось удалить ключ: {ex.Message}"; }
     }
 
     private async Task LoadDisplaySettingsAsync()
@@ -114,6 +69,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             var settings = await _settings.LoadAsync();
             IncludeSnapshots = settings.IncludeSnapshots;
+            IncludeLegacyVersions = settings.IncludeLegacyVersions;
             SelectedLanguage = settings.Language;
             _settingsLoaded = true;
         }
@@ -129,9 +85,8 @@ public partial class SettingsViewModel : ObservableObject
     {
         try
         {
-            var settings = await _settings.LoadAsync();
-            settings.Language = LanguageOptions.Any(option => option.Code == language) ? language : "ru-RU";
-            await _settings.SaveAsync(settings);
+            var selectedLanguage = LanguageOptions.Any(option => option.Code == language) ? language : "ru-RU";
+            await _settings.UpdateAsync(settings => settings.Language = selectedLanguage);
             CatalogLanguageStatus = language == "ru-RU"
                 ? "Каталог будет автоматически переводиться на русский при поиске."
                 : "Для английского используется исходный текст каталога.";
@@ -139,15 +94,30 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex) { CatalogLanguageStatus = $"Не удалось сохранить язык: {ex.Message}"; }
     }
 
-    partial void OnIncludeSnapshotsChanged(bool value) => _ = SaveSnapshotsAsync(value);
+    partial void OnIncludeSnapshotsChanged(bool value)
+    {
+        if (_settingsLoaded) _ = SaveSnapshotsAsync(value);
+    }
 
     private async Task SaveSnapshotsAsync(bool value)
     {
         try
         {
-            var settings = await _settings.LoadAsync();
-            settings.IncludeSnapshots = value;
-            await _settings.SaveAsync(settings);
+            await _settings.UpdateAsync(settings => settings.IncludeSnapshots = value);
+        }
+        catch (Exception ex) { StatusText = $"Не удалось сохранить настройки версий: {ex.Message}"; }
+    }
+
+    partial void OnIncludeLegacyVersionsChanged(bool value)
+    {
+        if (_settingsLoaded) _ = SaveLegacyVersionsAsync(value);
+    }
+
+    private async Task SaveLegacyVersionsAsync(bool value)
+    {
+        try
+        {
+            await _settings.UpdateAsync(settings => settings.IncludeLegacyVersions = value);
         }
         catch (Exception ex) { StatusText = $"Не удалось сохранить настройки версий: {ex.Message}"; }
     }
@@ -160,9 +130,7 @@ public partial class SettingsViewModel : ObservableObject
         System.Windows.Application.Current.Resources["MotionLevel"] = _motion.Level;
         try
         {
-            var settings = await _settings.LoadAsync();
-            settings.ReduceAnimations = value;
-            await _settings.SaveAsync(settings);
+            await _settings.UpdateAsync(settings => settings.ReduceAnimations = value);
         }
         catch (Exception ex) { StatusText = $"Не удалось сохранить настройку анимаций: {ex.Message}"; }
     }
@@ -175,9 +143,7 @@ public partial class SettingsViewModel : ObservableObject
         _backdrop.SetMode(mode);
         try
         {
-            var settings = await _settings.LoadAsync();
-            settings.WindowBackdrop = mode.ToString();
-            await _settings.SaveAsync(settings);
+            await _settings.UpdateAsync(settings => settings.WindowBackdrop = mode.ToString());
         }
         catch (Exception ex) { StatusText = $"Не удалось сохранить оформление: {ex.Message}"; }
     }

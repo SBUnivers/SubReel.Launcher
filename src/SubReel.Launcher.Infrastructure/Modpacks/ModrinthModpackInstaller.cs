@@ -36,7 +36,7 @@ public sealed class ModrinthModpackInstaller(HttpClient httpClient, IAppPaths pa
         try
         {
             progress?.Report(new ModpackInstallProgress("Скачиваю архив Modrinth…", 0.05));
-            await DownloadFileAsync(archiveUri, archivePath, cancellationToken);
+            await DownloadFileAsync(archiveUri, archivePath, MaxExpandedBytes, cancellationToken: cancellationToken);
             if (!string.IsNullOrWhiteSpace(version.Sha1))
                 await VerifySha1Async(archivePath, version.Sha1, cancellationToken);
 
@@ -60,12 +60,26 @@ public sealed class ModrinthModpackInstaller(HttpClient httpClient, IAppPaths pa
                 .ToArray();
             if (files.Count + overrides.Length > MaxArchiveEntries) throw new InvalidDataException("Сборка содержит слишком много файлов.");
 
-            createdInstance = await instances.CreateAsync(name, minecraftVersion, loader, loaderVersion, memoryMb, cancellationToken);
+            createdInstance = await instances.CreateAsync(name, minecraftVersion, loader, loaderVersion, memoryMb, cancellationToken, isModpackInstall: true);
             createdInstance.Source = $"Modrinth:{project.Id}:{version.Id}";
+            createdInstance.ModpackManifest = new InstalledModpackManifest
+            {
+                Provider = ModpackProvider.Modrinth.ToString(),
+                ProjectId = project.Id,
+                ProjectSlug = project.Slug,
+                ProjectTitle = project.Title,
+                VersionId = version.Id,
+                VersionName = version.VersionNumber,
+                MinecraftVersion = minecraftVersion,
+                Loader = loader.ToString(),
+                LoaderVersion = loaderVersion
+            };
             await instances.UpdateAsync(createdInstance, cancellationToken);
 
             long totalBytes = files.Sum(file => file.Size) + overrides.Sum(entry => entry.Length);
             if (totalBytes > MaxExpandedBytes) throw new InvalidDataException("Размер распакованной сборки превышает 2 ГБ.");
+            var downloadBudget = MaxExpandedBytes - overrides.Sum(entry => entry.Length);
+            long downloadedBytes = 0;
             var completed = 0;
             using var parallel = new SemaphoreSlim(4, 4);
             var downloads = files.Select(async file =>
@@ -75,7 +89,12 @@ public sealed class ModrinthModpackInstaller(HttpClient httpClient, IAppPaths pa
                 {
                     var destination = GetSafeDestination(createdInstance.GameDirectory, file.Path);
                     Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                    await DownloadFileAsync(file.Url, destination, cancellationToken);
+                    var fileLimit = file.Size > 0 ? Math.Min(file.Size, downloadBudget) : downloadBudget;
+                    await DownloadFileAsync(file.Url, destination, fileLimit, bytes =>
+                    {
+                        if (Interlocked.Add(ref downloadedBytes, bytes) > downloadBudget)
+                            throw new InvalidDataException("Фактический размер файлов модпака превышает лимит 2 ГБ.");
+                    }, cancellationToken);
                     await VerifySha1Async(destination, file.Sha1, cancellationToken);
                     var index = Interlocked.Increment(ref completed);
                     progress?.Report(new ModpackInstallProgress($"Загружено файлов: {index}/{files.Count}", 0.1 + 0.75 * index / Math.Max(1, files.Count + overrides.Length)));
@@ -107,6 +126,8 @@ public sealed class ModrinthModpackInstaller(HttpClient httpClient, IAppPaths pa
                 progress?.Report(new ModpackInstallProgress($"Распаковка файлов: {count}/{files.Count + overrides.Length}", 0.1 + 0.75 * count / Math.Max(1, files.Count + overrides.Length)));
             }
 
+            createdInstance.InstallState = InstanceInstallState.Ready;
+            await instances.UpdateAsync(createdInstance, cancellationToken);
             progress?.Report(new ModpackInstallProgress("Сборка установлена. Minecraft подготовится при первом запуске.", 1));
             return new InstalledModpack(createdInstance.Id, createdInstance.Name, minecraftVersion, loader.ToString());
         }
@@ -149,12 +170,16 @@ public sealed class ModrinthModpackInstaller(HttpClient httpClient, IAppPaths pa
     private static List<PackFile> ReadClientFiles(JsonElement root)
     {
         var result = new List<PackFile>();
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (!root.TryGetProperty("files", out var files) || files.ValueKind != JsonValueKind.Array) return result;
         foreach (var file in files.EnumerateArray())
         {
             if (file.TryGetProperty("env", out var env) && env.TryGetProperty("client", out var client) &&
                 string.Equals(client.GetString(), "unsupported", StringComparison.OrdinalIgnoreCase)) continue;
             var path = ReadRequiredString(file, "path");
+            var normalizedPath = path.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(normalizedPath) || normalizedPath.Contains(':') || !paths.Add(normalizedPath))
+                throw new InvalidDataException($"Путь файла в модпаке пустой или повторяется: {path}");
             var hashes = file.GetProperty("hashes");
             var hash = ReadRequiredString(hashes, "sha1");
             var urls = file.GetProperty("downloads");
@@ -167,13 +192,36 @@ public sealed class ModrinthModpackInstaller(HttpClient httpClient, IAppPaths pa
         return result;
     }
 
-    private async Task DownloadFileAsync(Uri uri, string destination, CancellationToken cancellationToken)
+    private async Task DownloadFileAsync(Uri uri, string destination, long maxBytes,
+        Action<long>? reportBytes = null, CancellationToken cancellationToken = default)
     {
-        using var response = await httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await using var target = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-        await source.CopyToAsync(target, cancellationToken);
+        try
+        {
+            using var response = await httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            var contentLength = response.Content.Headers.ContentLength;
+            if (contentLength.HasValue && contentLength.Value > maxBytes)
+                throw new InvalidDataException($"Файл превышает допустимый размер: {Path.GetFileName(destination)}");
+            await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var target = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+            var buffer = new byte[81920];
+            long written = 0;
+            while (true)
+            {
+                var read = await source.ReadAsync(buffer, cancellationToken);
+                if (read == 0) break;
+                written += read;
+                if (written > maxBytes)
+                    throw new InvalidDataException($"Файл превышает допустимый размер: {Path.GetFileName(destination)}");
+                reportBytes?.Invoke(read);
+                await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            }
+        }
+        catch
+        {
+            try { if (File.Exists(destination)) File.Delete(destination); } catch { }
+            throw;
+        }
     }
 
     private static async Task VerifySha1Async(string path, string expected, CancellationToken cancellationToken)
@@ -187,7 +235,7 @@ public sealed class ModrinthModpackInstaller(HttpClient httpClient, IAppPaths pa
     private static string GetSafeDestination(string rootDirectory, string relativePath)
     {
         var normalized = relativePath.Replace('\\', '/');
-        if (Path.IsPathRooted(normalized) || normalized.Split('/').Any(part => part == ".."))
+        if (string.IsNullOrWhiteSpace(normalized) || normalized.Contains(':') || Path.IsPathRooted(normalized) || normalized.Split('/').Any(part => part == ".."))
             throw new InvalidDataException($"Недопустимый путь в сборке: {relativePath}");
         var root = Path.GetFullPath(rootDirectory) + Path.DirectorySeparatorChar;
         var destination = Path.GetFullPath(Path.Combine(rootDirectory, normalized.Replace('/', Path.DirectorySeparatorChar)));

@@ -13,6 +13,7 @@ public partial class ModpackCardViewModel(ModpackSummary project) : ObservableOb
     public string Title => Project.Title;
     public string Description => Project.Description;
     public string? IconUrl => Project.IconUrl;
+    public string? AuthorLabel => string.IsNullOrWhiteSpace(Project.Author) ? null : $"Автор: {Project.Author}";
     public string CategoriesLabel => Project.CategoriesLabel;
     public string DownloadsLabel => Project.DownloadsLabel;
     partial void OnTranslatedTitleChanged(string? value) => OnPropertyChanged(nameof(DisplayTitle));

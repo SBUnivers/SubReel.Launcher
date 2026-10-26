@@ -15,7 +15,9 @@ public sealed class LauncherSettings
     public string? LastSelectedVersionGroup { get; set; }
     public string? LastSelectedMinecraftVersion { get; set; }
     public string LastSelectedLoader { get; set; } = "Vanilla";
+    public Guid? LastPlayedInstanceId { get; set; }
     public bool IncludeSnapshots { get; set; }
+    public bool IncludeLegacyVersions { get; set; }
     public bool HasCompletedWelcomeSetup { get; set; }
 }
 
@@ -23,4 +25,5 @@ public interface ISettingsService
 {
     Task<LauncherSettings> LoadAsync(CancellationToken cancellationToken = default);
     Task SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default);
+    Task UpdateAsync(Action<LauncherSettings> update, CancellationToken cancellationToken = default);
 }

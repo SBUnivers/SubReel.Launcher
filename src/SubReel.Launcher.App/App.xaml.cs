@@ -82,8 +82,19 @@ public partial class App : Application
 #if DEBUG
             modules = [.. modules, new DesignSystemModule()];
 #endif
+            var moduleDefinitions = modules
+                .Select(module => (Module: module, NavigationItems: module.GetNavItems().ToArray()))
+                .ToArray();
+            ValidateModuleDefinitions(moduleDefinitions);
 
             var builder = Host.CreateApplicationBuilder();
+            builder.ConfigureContainer(
+                new DefaultServiceProviderFactory(new ServiceProviderOptions
+                {
+                    ValidateScopes = true,
+                    ValidateOnBuild = true
+                }),
+                _ => { });
 
             builder.Services.AddSingleton<IAppPaths>(appPaths);
             builder.Services.AddSingleton<ISettingsService, JsonSettingsService>();
@@ -125,13 +136,13 @@ public partial class App : Application
                 client.Timeout = TimeSpan.FromMinutes(10);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("SubReelLauncher/0.1.0 (+https://github.com/SBUnivers/SubReel.Launcher)");
             });
-            builder.Services.AddSingleton<ITranslationKeyStore, DpapiTranslationKeyStore>();
             builder.Services.AddHttpClient<IModpackTextTranslator, DeepLModpackTextTranslator>(client =>
             {
-                client.BaseAddress = new Uri("https://api-free.deepl.com/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.BaseAddress = new Uri(builder.Configuration["Platform:ApiBaseUrl"] ?? "https://www.subreel.ru/api/launcher/");
+                client.Timeout = TimeSpan.FromSeconds(25);
             });
             builder.Services.AddSingleton<IGameService, CmlLibGameService>();
+            builder.Services.AddSingleton<IJavaRuntimeInspector, JavaRuntimeInspector>();
             builder.Services.AddSingleton<IGameLoaderCatalog, CmlLibGameLoaderCatalog>();
             builder.Services.AddHttpClient("SupabaseAuth", client => client.Timeout = TimeSpan.FromSeconds(20));
             builder.Services.AddSingleton<ISubReelAuthService, SupabaseAuthService>();
@@ -149,10 +160,10 @@ public partial class App : Application
             builder.Logging.ClearProviders();
             builder.Services.AddSerilog();
 
-            foreach (var module in modules)
+            foreach (var definition in moduleDefinitions)
             {
-                module.ConfigureServices(builder.Services);
-                builder.Services.AddSingleton<ILauncherModule>(module);
+                definition.Module.ConfigureServices(builder.Services);
+                builder.Services.AddSingleton<ILauncherModule>(definition.Module);
             }
 
             builder.Services.AddSingleton<INavigationService, NavigationService>();
@@ -162,6 +173,18 @@ public partial class App : Application
             _host = builder.Build();
 
             await _host.StartAsync();
+
+            try
+            {
+                var recoveredInstallCount = await _host.Services.GetRequiredService<InstanceService>()
+                    .RecoverInterruptedModpackInstallsAsync();
+                if (recoveredInstallCount > 0)
+                    Log.Warning("Удалено незавершённых установок модпаков после прошлого аварийного завершения: {Count}", recoveredInstallCount);
+            }
+            catch (Exception recoveryException)
+            {
+                Log.Warning(recoveryException, "Не удалось полностью очистить незавершённые установки; запуск лаунчера продолжится");
+            }
 
             var navigation = _host.Services
                 .GetRequiredService<INavigationService>();
@@ -276,9 +299,9 @@ public partial class App : Application
                 Application.Current.Resources["MotionLevel"] = MotionLevel.Reduced;
             }
 
-            foreach (var module in _host.Services.GetServices<ILauncherModule>())
+            foreach (var definition in moduleDefinitions)
             {
-                foreach (var item in module.GetNavItems())
+                foreach (var item in definition.NavigationItems)
                 {
                     var navigationItem = new NavigationItem(item.Id, item.Title, item.Icon, item.Description);
                     navigation.Register(navigationItem, item.ViewModelType is null
@@ -310,6 +333,30 @@ public partial class App : Application
 
             Shutdown(-1);
         }
+    }
+
+    private static void ValidateModuleDefinitions(
+        IReadOnlyCollection<(ILauncherModule Module, NavItem[] NavigationItems)> definitions)
+    {
+        var invalidModule = definitions.FirstOrDefault(x => string.IsNullOrWhiteSpace(x.Module.Id));
+        if (invalidModule.Module is not null)
+            throw new InvalidOperationException("У модуля лаунчера должен быть задан непустой идентификатор.");
+
+        var duplicateModuleId = definitions
+            .GroupBy(x => x.Module.Id, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateModuleId is not null)
+            throw new InvalidOperationException($"Идентификатор модуля '{duplicateModuleId.Key}' зарегистрирован несколько раз.");
+
+        var navigationItems = definitions.SelectMany(x => x.NavigationItems).ToArray();
+        if (navigationItems.Any(item => item is null || string.IsNullOrWhiteSpace(item.Id)))
+            throw new InvalidOperationException("Каждый пункт навигации модуля должен иметь непустой идентификатор.");
+
+        var duplicateNavigationId = navigationItems
+            .GroupBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateNavigationId is not null)
+            throw new InvalidOperationException($"Идентификатор страницы '{duplicateNavigationId.Key}' зарегистрирован несколькими модулями.");
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

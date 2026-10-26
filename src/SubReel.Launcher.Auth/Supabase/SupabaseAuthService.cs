@@ -205,9 +205,12 @@ public sealed class SupabaseAuthService : ISubReelAuthService
     private async Task SaveSessionAsync(SubReelAuthSession session, CancellationToken ct)
     {
         var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(session, JsonOptions));
-        var protectedBytes = ProtectedData.Protect(bytes, Entropy, DataProtectionScope.CurrentUser);
-        await File.WriteAllBytesAsync(_sessionPath, protectedBytes, ct);
-        CryptographicOperations.ZeroMemory(bytes);
+        try
+        {
+            var protectedBytes = ProtectedData.Protect(bytes, Entropy, DataProtectionScope.CurrentUser);
+            await AtomicFileWriter.WriteAllBytesAsync(_sessionPath, protectedBytes, ct);
+        }
+        finally { CryptographicOperations.ZeroMemory(bytes); }
     }
 
     private async Task<SubReelAuthSession?> LoadSessionAsync(CancellationToken ct)
@@ -222,9 +225,24 @@ public sealed class SupabaseAuthService : ISubReelAuthService
         }
         catch (Exception ex) when (ex is CryptographicException or IOException or JsonException)
         {
-            _logger.LogWarning(ex, "Локальная сессия Supabase повреждена или недоступна; удаляем её");
-            TryDeleteSession();
+            _logger.LogWarning(ex, "Локальная сессия Supabase повреждена или недоступна; сохраняем копию и просим войти повторно");
+            QuarantineSessionFile();
             return null;
+        }
+    }
+
+    private void QuarantineSessionFile()
+    {
+        try
+        {
+            if (!File.Exists(_sessionPath)) return;
+            var backupPath = $"{_sessionPath}.corrupt-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
+            File.Move(_sessionPath, backupPath);
+            _logger.LogWarning("Повреждённая сессия сохранена в резервную копию {BackupPath}", backupPath);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "Не удалось переместить повреждённую сессию в резервную копию");
         }
     }
 
