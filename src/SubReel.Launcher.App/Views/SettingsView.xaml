@@ -30,10 +30,10 @@
                     <TextBlock Text="Текущая версия" Foreground="{DynamicResource TextSecondary}" Margin="0,20,0,4"/>
                     <TextBlock Text="{Binding CurrentVersion}" Foreground="{DynamicResource TextPrimary}" FontSize="16"/>
                     <TextBlock Text="{Binding UpdateSetupStatus}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,16,0,0"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                        <Button Content="Проверить обновления" Command="{Binding CheckForUpdatesCommand}" IsEnabled="{Binding CanCheckForUpdates}" Padding="14,10" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0"/>
-                        <Button Content="Скачать и перезапустить" Command="{Binding DownloadAndRestartCommand}" Visibility="{Binding HasAvailableUpdate, Converter={StaticResource BooleanToVisibilityConverter}}" Padding="14,10" Margin="10,0,0,0" Background="{DynamicResource BorderBrush}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0"/>
-                    </StackPanel>
+                    <WrapPanel Margin="0,20,0,0">
+                        <Button Content="Проверить обновления" Command="{Binding CheckForUpdatesCommand}" IsEnabled="{Binding CanCheckForUpdates}" Padding="14,10" Margin="0,0,10,8" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0"/>
+                        <Button Content="Скачать и перезапустить" Command="{Binding DownloadAndRestartCommand}" Visibility="{Binding HasAvailableUpdate, Converter={StaticResource BooleanToVisibilityConverter}}" Padding="14,10" Margin="0,0,10,8" Background="{DynamicResource BorderBrush}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0"/>
+                    </WrapPanel>
                     <ProgressBar Value="{Binding DownloadProgress}" Maximum="100" Height="5" Margin="0,18,0,0"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,12,0,0"/>
                 </StackPanel>
