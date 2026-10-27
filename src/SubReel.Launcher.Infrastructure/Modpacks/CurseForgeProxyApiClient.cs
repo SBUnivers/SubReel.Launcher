@@ -47,11 +47,10 @@ public sealed class CurseForgeProxyApiClient(HttpClient http, ILauncherSessionPr
 
     public async Task DownloadFileAsync(int projectId, int fileId, Stream destination, IProgress<long>? progress = null, CancellationToken cancellationToken = default)
     {
-        using var request = CreateRequest(HttpMethod.Get, BuildPath(new Dictionary<string, string?>
+        using var response = await SendAuthenticatedAsync(HttpMethod.Get, BuildPath(new Dictionary<string, string?>
         {
             ["action"] = "download", ["projectId"] = projectId.ToString(), ["fileId"] = fileId.ToString()
-        }));
-        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        }), null, cancellationToken, HttpCompletionOption.ResponseHeadersRead);
         await EnsureSuccessAsync(response, cancellationToken);
         await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
         var buffer = new byte[128 * 1024];
@@ -69,23 +68,36 @@ public sealed class CurseForgeProxyApiClient(HttpClient http, ILauncherSessionPr
 
     private async Task<JsonDocument> SendJsonAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
-        using var request = CreateRequest(method, path);
-        if (body is not null) request.Content = JsonContent.Create(body);
-        using var response = await http.SendAsync(request, cancellationToken);
+        using var response = await SendAuthenticatedAsync(method, path, body, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
     }
 
-    private HttpRequestMessage CreateRequest(HttpMethod method, string path)
+    private async Task<HttpResponseMessage> SendAuthenticatedAsync(HttpMethod method, string path, object? body,
+        CancellationToken cancellationToken, HttpCompletionOption completion = HttpCompletionOption.ResponseContentRead)
     {
-        var accessToken = session.AccessToken;
+        var accessToken = await session.GetAccessTokenAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(accessToken))
             throw new InvalidOperationException("Войди в аккаунт SubReel, чтобы открыть каталог CurseForge.");
-        var request = new HttpRequestMessage(method, path);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        return request;
+
+        var response = await SendOnceAsync(accessToken);
+        if (response.StatusCode != System.Net.HttpStatusCode.Unauthorized) return response;
+        response.Dispose();
+
+        accessToken = await session.GetAccessTokenAsync(cancellationToken, forceRefresh: true);
+        if (string.IsNullOrWhiteSpace(accessToken))
+            throw new HttpRequestException("Сессия SubReel истекла. Войди в аккаунт снова.", null, System.Net.HttpStatusCode.Unauthorized);
+        return await SendOnceAsync(accessToken);
+
+        async Task<HttpResponseMessage> SendOnceAsync(string token)
+        {
+            using var request = new HttpRequestMessage(method, path);
+            if (body is not null) request.Content = JsonContent.Create(body);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            return await http.SendAsync(request, completion, cancellationToken);
+        }
     }
 
     private static string BuildPath(IReadOnlyDictionary<string, string?> parameters) =>
@@ -97,11 +109,15 @@ public sealed class CurseForgeProxyApiClient(HttpClient http, ILauncherSessionPr
         if (response.IsSuccessStatusCode) return;
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         var contentType = response.Content.Headers.ContentType?.MediaType;
+        var trimmedBody = body.AsSpan().TrimStart();
+        var isHtml = contentType?.Contains("html", StringComparison.OrdinalIgnoreCase) == true ||
+            trimmedBody.StartsWith("<!doctype html", StringComparison.OrdinalIgnoreCase) ||
+            trimmedBody.StartsWith("<html", StringComparison.OrdinalIgnoreCase);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound &&
-            (contentType?.Contains("html", StringComparison.OrdinalIgnoreCase) == true || body.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase)))
+            isHtml)
             throw new HttpRequestException("API-прокси CurseForge ещё не развернут на сайте SubReel. Нужно обновить production-деплой проекта subreel-platform.", null, response.StatusCode);
 
-        if (contentType?.Contains("html", StringComparison.OrdinalIgnoreCase) == true)
+        if (isHtml)
             body = "Сайт вернул HTML вместо ответа API. Проверьте адрес и production-деплой прокси.";
         else if (body.Length > 500)
             body = body[..500] + "…";

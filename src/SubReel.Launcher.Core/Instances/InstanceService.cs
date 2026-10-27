@@ -1,10 +1,39 @@
 using SubReel.Launcher.Core.Models;
 using SubReel.Launcher.Abstractions.Paths;
+using Microsoft.Extensions.Logging;
 
 namespace SubReel.Launcher.Core.Instances;
 
-public sealed class InstanceService(IInstanceRepository repository, IAppPaths paths)
+public sealed class InstanceService(IInstanceRepository repository, IAppPaths paths, ILogger<InstanceService> logger)
 {
+    public string GetValidatedGameDirectory(MinecraftInstance instance)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        if (instance.Id == Guid.Empty)
+            throw new InvalidOperationException("У сборки отсутствует корректный идентификатор.");
+
+        var instancesRoot = Path.GetFullPath(paths.Instances);
+        if (Directory.Exists(instancesRoot) && IsReparsePoint(instancesRoot))
+            throw new InvalidOperationException("Корневой каталог инстансов является ссылкой.");
+
+        var instanceRoot = Path.GetFullPath(Path.Combine(instancesRoot, instance.Id.ToString("N")));
+        if (!string.Equals(Path.GetRelativePath(instancesRoot, instanceRoot), instance.Id.ToString("N"), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Путь сборки не прошёл проверку безопасности.");
+        if (Directory.Exists(instanceRoot) && IsReparsePoint(instanceRoot))
+            throw new InvalidOperationException("Каталог сборки является ссылкой.");
+
+        var gameDirectory = Path.GetFullPath(instance.GameDirectory);
+        var relative = Path.GetRelativePath(instanceRoot, gameDirectory);
+        if (Path.IsPathRooted(relative) || relative == "." || relative == ".." ||
+            relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
+            throw new InvalidOperationException("Папка игры находится за пределами каталога этой сборки.");
+        if (Directory.Exists(gameDirectory) && IsReparsePoint(gameDirectory))
+            throw new InvalidOperationException("Игровая папка является ссылкой.");
+
+        return gameDirectory;
+    }
+
     public Task<IReadOnlyList<MinecraftInstance>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
@@ -91,6 +120,7 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
     public async Task<int> RecoverInterruptedModpackInstallsAsync(CancellationToken cancellationToken = default)
     {
         CleanupInterruptedInstallStaging(cancellationToken);
+        await CleanupInterruptedInstanceDeletionsAsync(cancellationToken);
         var interrupted = (await repository.GetAllAsync(cancellationToken))
             .Where(instance => instance.InstallState == InstanceInstallState.Installing)
             .ToArray();
@@ -102,6 +132,49 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
             recovered++;
         }
         return recovered;
+    }
+
+    private async Task CleanupInterruptedInstanceDeletionsAsync(CancellationToken cancellationToken)
+    {
+        var instancesRoot = Path.GetFullPath(paths.Instances);
+        if (!Directory.Exists(instancesRoot) || IsReparsePoint(instancesRoot)) return;
+        var existingIds = (await repository.GetAllAsync(cancellationToken))
+            .Select(instance => instance.Id)
+            .ToHashSet();
+
+        foreach (var directory in Directory.EnumerateDirectories(instancesRoot, ".deleting-*", SearchOption.TopDirectoryOnly))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var name = Path.GetFileName(directory);
+            const string prefix = ".deleting-";
+            if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || IsReparsePoint(directory))
+                continue;
+            var identity = name[prefix.Length..];
+            var separator = identity.IndexOf('-');
+            if (separator <= 0 ||
+                !Guid.TryParseExact(identity[..separator], "N", out var instanceId) ||
+                !Guid.TryParseExact(identity[(separator + 1)..], "N", out _))
+                continue;
+            if (existingIds.Contains(instanceId))
+            {
+                logger.LogError("Preserving staged files for instance {InstanceId} because its catalog record still exists: {Directory}", instanceId, directory);
+                continue;
+            }
+
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+                logger.LogInformation("Removed instance deletion staging directory {Directory}", directory);
+            }
+            catch (IOException ex)
+            {
+                logger.LogWarning(ex, "Could not clean interrupted instance deletion directory {Directory}", directory);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                logger.LogWarning(ex, "Could not clean interrupted instance deletion directory {Directory}", directory);
+            }
+        }
     }
 
     private void CleanupInterruptedInstallStaging(CancellationToken cancellationToken)
@@ -262,31 +335,59 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
         if (instance is null)
             return;
 
-        if (deleteFiles)
-            DeleteInstanceFiles(instance);
+        var stagedDirectory = deleteFiles ? StageInstanceFilesForDeletion(instance) : null;
+        try
+        {
+            await repository.DeleteAsync(id, cancellationToken);
+        }
+        catch (Exception deleteException)
+        {
+            if (stagedDirectory is not null && Directory.Exists(stagedDirectory))
+            {
+                try
+                {
+                    var originalDirectory = Path.Combine(Path.GetFullPath(paths.Instances), instance.Id.ToString("N"));
+                    Directory.Move(stagedDirectory, originalDirectory);
+                }
+                catch (Exception rollbackException) when (rollbackException is IOException or UnauthorizedAccessException)
+                {
+                    throw new IOException(
+                        $"Не удалось удалить запись сборки и восстановить её файлы. Файлы сохранены во временной папке: {stagedDirectory}",
+                        new AggregateException(deleteException, rollbackException));
+                }
+            }
 
-        await repository.DeleteAsync(id, cancellationToken);
+            throw;
+        }
+
+        if (stagedDirectory is not null && Directory.Exists(stagedDirectory))
+        {
+            try
+            {
+                Directory.Delete(stagedDirectory, recursive: true);
+            }
+            catch (IOException ex)
+            {
+                // The catalog record is already committed; retry cleanup on the next startup.
+                logger.LogWarning(ex, "Instance {InstanceId} was removed but its staged files could not yet be deleted", id);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                logger.LogWarning(ex, "Instance {InstanceId} was removed but its staged files could not yet be deleted", id);
+            }
+        }
     }
 
-    private void DeleteInstanceFiles(MinecraftInstance instance)
+    private string? StageInstanceFilesForDeletion(MinecraftInstance instance)
     {
         var instancesRoot = Path.GetFullPath(paths.Instances);
+        var gameDirectory = GetValidatedGameDirectory(instance);
         var instanceRoot = Path.GetFullPath(Path.Combine(instancesRoot, instance.Id.ToString("N")));
-        var rootRelative = Path.GetRelativePath(instancesRoot, instanceRoot);
-        if (!string.Equals(rootRelative, instance.Id.ToString("N"), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Путь инстанса не прошёл проверку безопасности.");
 
-        var gameDirectory = Path.GetFullPath(instance.GameDirectory);
-        var gameRelative = Path.GetRelativePath(instanceRoot, gameDirectory);
-        if (Path.IsPathRooted(gameRelative) || gameRelative == "." || gameRelative == ".." ||
-            gameRelative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
-            gameRelative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
-            throw new InvalidOperationException("Игровая папка находится за пределами каталога этого инстанса. Файлы не удалены.");
+        if (!Directory.Exists(instanceRoot)) return null;
 
-        if (!Directory.Exists(instanceRoot)) return;
-        if ((File.GetAttributes(instanceRoot) & FileAttributes.ReparsePoint) != 0)
-            throw new InvalidOperationException("Каталог инстанса является ссылкой. Рекурсивное удаление отменено.");
-
-        Directory.Delete(instanceRoot, recursive: true);
+        var stagedDirectory = Path.Combine(instancesRoot, $".deleting-{instance.Id:N}-{Guid.NewGuid():N}");
+        Directory.Move(instanceRoot, stagedDirectory);
+        return stagedDirectory;
     }
 }

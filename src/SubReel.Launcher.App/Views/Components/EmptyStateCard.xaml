@@ -1,0 +1,33 @@
+<UserControl x:Class="SubReel.Launcher.App.Views.Components.EmptyStateCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:design="clr-namespace:SubReel.Launcher.App.DesignSystem"
+             x:Name="Root">
+    <UserControl.Resources>
+        <design:IconGeometryConverter x:Key="IconGeometryConverter"/>
+    </UserControl.Resources>
+    <Border Background="{DynamicResource CardRaisedBackground}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="12"
+            Padding="16"
+            AutomationProperties.LiveSetting="Polite">
+        <StackPanel>
+            <Path Width="24" Height="24" Margin="0,0,0,10"
+                  HorizontalAlignment="Left"
+                  Stretch="Uniform"
+                  Fill="{DynamicResource AccentBrush}"
+                  Data="{Binding IconKey, ElementName=Root, Converter={StaticResource IconGeometryConverter}}"/>
+            <TextBlock Text="{Binding Title, ElementName=Root}"
+                       FontSize="{design:ScaledFontSize 14}"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimary}"
+                       TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Message, ElementName=Root}"
+                       FontSize="{design:ScaledFontSize 12}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap"
+                       Margin="0,5,0,0"/>
+        </StackPanel>
+    </Border>
+</UserControl>

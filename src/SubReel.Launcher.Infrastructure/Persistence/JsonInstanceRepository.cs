@@ -117,7 +117,12 @@ public sealed class JsonInstanceRepository : IInstanceRepository
                 await WriteAllCoreAsync(instances, cancellationToken);
 
             var manifestPath = GetInstanceManifestPath(id, removedInstance);
-            if (manifestPath is not null && File.Exists(manifestPath)) File.Delete(manifestPath);
+            if (manifestPath is not null && File.Exists(manifestPath))
+            {
+                try { File.Delete(manifestPath); }
+                catch (IOException ex) { _logger.LogWarning(ex, "Removed instance {InstanceId} from the catalog but could not delete its manifest", id); }
+                catch (UnauthorizedAccessException ex) { _logger.LogWarning(ex, "Removed instance {InstanceId} from the catalog but could not delete its manifest", id); }
+            }
         }
         finally
         {
@@ -238,11 +243,19 @@ public sealed class JsonInstanceRepository : IInstanceRepository
 
     private string GetInstanceDirectory(MinecraftInstance instance)
     {
+        if (instance.Id == Guid.Empty)
+            throw new InvalidOperationException("Идентификатор сборки не задан.");
+        if (Directory.Exists(_instancesRoot) &&
+            (File.GetAttributes(_instancesRoot) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("Корневой каталог инстансов является ссылкой.");
+
         var gameDirectory = Path.GetFullPath(instance.GameDirectory);
         var relative = Path.GetRelativePath(_instancesRoot, gameDirectory);
         if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative))
             throw new InvalidOperationException("Папка игры должна находиться внутри каталога инстансов лаунчера.");
         var instanceId = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+        if (!instanceId.Equals(instance.Id.ToString("N"), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Папка игры должна находиться в каталоге своего инстанса.");
         return Path.Combine(_instancesRoot, instanceId);
     }
 

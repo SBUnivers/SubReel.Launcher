@@ -1,6 +1,11 @@
 <UserControl x:Class="SubReel.Launcher.App.Views.SectionView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:design="clr-namespace:SubReel.Launcher.App.DesignSystem"
+             xmlns:components="clr-namespace:SubReel.Launcher.App.Views.Components">
+    <UserControl.Resources>
+        <design:IconGeometryConverter x:Key="IconGeometryConverter"/>
+    </UserControl.Resources>
 
     <Grid Margin="32">
         <Grid.RowDefinitions>
@@ -10,44 +15,33 @@
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="{Binding Icon}"
-                       FontSize="38"
-                       Foreground="{DynamicResource AccentBrush}"/>
+            <Path Data="{Binding Icon, Converter={StaticResource IconGeometryConverter}}"
+                  Width="32" Height="32"
+                  Stretch="Uniform"
+                  Fill="Transparent"
+                  Stroke="{DynamicResource AccentBrush}"
+                  StrokeThickness="2"/>
 
             <TextBlock Text="{Binding Title}"
-                       FontSize="30"
+                       FontSize="{design:ScaledFontSize 30}"
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimary}"
                        Margin="0,12,0,0"/>
 
             <TextBlock Text="{Binding Description}"
-                       FontSize="15"
+                       FontSize="{design:ScaledFontSize 15}"
                        Foreground="{DynamicResource TextSecondary}"
                        TextWrapping="Wrap"
                        Margin="0,10,0,0"/>
         </StackPanel>
 
-        <Border Grid.Row="2"
-                Background="{DynamicResource CardBackground}"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="16"
-                Padding="24"
-                Margin="0,28,0,0">
-
-            <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Center">
-                <TextBlock Text="SubReel Launcher"
-                           FontSize="22"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimary}"
-                           HorizontalAlignment="Center"/>
-
-                <TextBlock Text="Компонент страницы подключён"
-                           Foreground="{DynamicResource TextSecondary}"
-                           Margin="0,10,0,0"
-                           HorizontalAlignment="Center"/>
-            </StackPanel>
-        </Border>
+        <components:EmptyStateCard Grid.Row="2"
+                                   Title="{DynamicResource Section.PlaceholderTitle}"
+                                   Message="{DynamicResource Section.PlaceholderMessage}"
+                                   IconKey="{Binding Icon}"
+                                   MaxWidth="560"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Center"
+                                   Margin="0,28,0,0"/>
     </Grid>
 </UserControl>

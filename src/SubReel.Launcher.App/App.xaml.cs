@@ -98,6 +98,7 @@ public partial class App : Application
 
             builder.Services.AddSingleton<IAppPaths>(appPaths);
             builder.Services.AddSingleton<ISettingsService, JsonSettingsService>();
+            builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
             builder.Services.AddSingleton<IThemeService, ThemeService>();
             builder.Services.AddSingleton<IMotionService, MotionService>();
             builder.Services.AddSingleton<IWindowBackdropService, WindowBackdropService>();
@@ -147,6 +148,9 @@ public partial class App : Application
             builder.Services.AddHttpClient("SupabaseAuth", client => client.Timeout = TimeSpan.FromSeconds(20));
             builder.Services.AddSingleton<ISubReelAuthService, SupabaseAuthService>();
             builder.Services.AddSingleton<ISupabaseGameProfileService, SupabaseGameProfileService>();
+            builder.Services.AddHttpClient<IPlatformHealthService, PlatformHealthService>(client =>
+                client.Timeout = TimeSpan.FromSeconds(10));
+            builder.Services.AddSingleton<IDiagnosticBundleService, DiagnosticBundleService>();
             builder.Services.AddSingleton<IGameAuthService>(sp => new MicrosoftGameAuthService(
                 sp.GetRequiredService<IAppPaths>().AccountsFile,
                 sp.GetRequiredService<IAppPaths>().LauncherAccountsFile,
@@ -190,6 +194,10 @@ public partial class App : Application
                 .GetRequiredService<INavigationService>();
 
             var settings = await _host.Services.GetRequiredService<ISettingsService>().LoadAsync();
+            var localization = _host.Services.GetRequiredService<ILocalizationService>();
+            localization.SetLanguage(settings.Language);
+            startupWindow.UseLocalization(localization);
+            FontScaleProvider.Instance.ScaleFactor = settings.TextScale;
             try
             {
                 if (ColorConverter.ConvertFromString(settings.AccentColor) is Color accentColor)
@@ -275,7 +283,8 @@ public partial class App : Application
                 try
                 {
                     var authWindow = new AuthWindow(subReelAuth, gameAuth,
-                        _host.Services.GetRequiredService<ISupabaseGameProfileService>()) { Owner = startupWindow };
+                        _host.Services.GetRequiredService<ISupabaseGameProfileService>(),
+                        _host.Services.GetRequiredService<ILocalizationService>()) { Owner = startupWindow };
                     authWindow.ShowDialog();
                     await CheckSubReelSessionAsync();
                 }
@@ -292,6 +301,7 @@ public partial class App : Application
             {
                 settings = completedSetup;
                 await _host.Services.GetRequiredService<ISettingsService>().SaveAsync(settings);
+                _host.Services.GetRequiredService<ILocalizationService>().SetLanguage(settings.Language);
             }
             if (settings.ReduceAnimations)
             {

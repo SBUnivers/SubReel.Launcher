@@ -32,4 +32,30 @@ public partial class InstancesView : UserControl
         Grid.SetRow(EditorPanel, isCompact ? 1 : 0);
         Grid.SetColumn(EditorPanel, isCompact ? 0 : 2);
     }
+
+    private void OnInstanceFiltersSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var isNarrow = e.NewSize.Width < 520;
+        InstanceFilters.RowDefinitions.Clear();
+        InstanceFilters.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        InstanceFilters.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+        InstanceFilters.ColumnDefinitions[1].Width = isNarrow ? new GridLength(0) : new GridLength(12);
+        InstanceFilters.ColumnDefinitions[2].Width = isNarrow ? new GridLength(1, GridUnitType.Star) : new GridLength(190);
+
+        if (isNarrow)
+        {
+            InstanceFilters.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(InstanceSortBox, 1);
+            Grid.SetColumn(InstanceSortBox, 0);
+            Grid.SetColumnSpan(InstanceSortBox, 3);
+            InstanceSortBox.Margin = new Thickness(0, 8, 0, 0);
+        }
+        else
+        {
+            Grid.SetRow(InstanceSortBox, 0);
+            Grid.SetColumn(InstanceSortBox, 2);
+            Grid.SetColumnSpan(InstanceSortBox, 1);
+            InstanceSortBox.Margin = new Thickness(0);
+        }
+    }
 }

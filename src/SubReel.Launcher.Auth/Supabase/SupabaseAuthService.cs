@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
+using System.Net.Sockets;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -14,10 +16,18 @@ namespace SubReel.Launcher.Auth.Supabase;
 [SupportedOSPlatform("windows")]
 public sealed class SupabaseAuthService : ISubReelAuthService
 {
+    private sealed class LoopbackCallback(TcpClient client, Uri uri) : IDisposable
+    {
+        public TcpClient Client { get; } = client;
+        public Uri Uri { get; } = uri;
+        public void Dispose() => Client.Dispose();
+    }
+
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("SubReel.Launcher.SupabaseSession.v1");
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly string _baseUrl;
     private readonly string _publishableKey;
+    private readonly string _websiteUrl;
     private readonly string _sessionPath;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SupabaseAuthService> _logger;
@@ -29,6 +39,7 @@ public sealed class SupabaseAuthService : ISubReelAuthService
     {
         _baseUrl = (configuration["Platform:SupabaseUrl"] ?? string.Empty).Trim().TrimEnd('/');
         _publishableKey = (configuration["Platform:SupabasePublishableKey"] ?? string.Empty).Trim();
+        _websiteUrl = (configuration["Platform:WebsiteUrl"] ?? "https://www.subreel.ru").Trim().TrimEnd('/');
         _sessionPath = Path.Combine(paths.Auth, "subreel-session.dpapi");
         _httpClientFactory = httpClientFactory;
         _logger = logger;
@@ -37,6 +48,100 @@ public sealed class SupabaseAuthService : ISubReelAuthService
     public bool IsConfigured => Uri.TryCreate(_baseUrl, UriKind.Absolute, out var uri) &&
         uri.Scheme == Uri.UriSchemeHttps && !string.IsNullOrWhiteSpace(_publishableKey);
     public SubReelAuthSession? CurrentSession => _session;
+    public bool IsBrowserSignInConfigured => IsConfigured && Uri.TryCreate(_websiteUrl, UriKind.Absolute, out var website) &&
+        (website.Scheme == Uri.UriSchemeHttps || (website.IsLoopback && website.Scheme == Uri.UriSchemeHttp));
+
+    public async Task<SubReelAuthResult> SignInWithBrowserAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsBrowserSignInConfigured)
+            return new(false, false, "Вход через сайт не настроен. Проверь Platform:WebsiteUrl и настройки Supabase.");
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMinutes(5));
+        var ct = timeout.Token;
+
+        var verifier = Base64Url(RandomNumberGenerator.GetBytes(32));
+        var challenge = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
+        var state = Base64Url(RandomNumberGenerator.GetBytes(32));
+        using var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        var listenerPort = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        var callbackUri = $"http://127.0.0.1:{listenerPort}/callback";
+
+        try
+        {
+            using var startPayload = await PostPlatformJsonAsync("/api/launcher/auth/start", new
+            {
+                state,
+                code_challenge = challenge,
+                redirect_uri = callbackUri
+            }, ct);
+            var authorizationUrl = GetString(startPayload.RootElement, "authorization_url");
+            if (!Uri.TryCreate(authorizationUrl, UriKind.Absolute, out var authUri) || authUri.Scheme != Uri.UriSchemeHttps && !authUri.IsLoopback)
+                return new(false, false, "Сайт вернул некорректный адрес входа.");
+
+            Process.Start(new ProcessStartInfo(authUri.ToString()) { UseShellExecute = true });
+            using var callbackRequest = await ReceiveLoopbackCallbackAsync(listener, ct);
+            var callbackUriResult = callbackRequest.Uri;
+            var callbackState = GetQueryValue(callbackUriResult, "state");
+            var code = GetQueryValue(callbackUriResult, "code");
+            var callbackError = GetQueryValue(callbackUriResult, "error");
+            var stateMatches = callbackState is not null && CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(state), Encoding.UTF8.GetBytes(callbackState));
+            await WriteCallbackResponseAsync(callbackRequest.Client.GetStream(),
+                stateMatches && !string.IsNullOrWhiteSpace(code) ? "Вход подтверждён. Можно вернуться в SubReel Launcher." : "Вход не завершён. Вернись в лаунчер и попробуй ещё раз.",
+                ct);
+            if (!stateMatches) return new(false, false, "Проверка безопасности входа не пройдена. Повтори попытку.");
+            if (!string.IsNullOrWhiteSpace(callbackError)) return new(false, false, "Вход через сайт отменён или истёк.");
+            if (string.IsNullOrWhiteSpace(code) || code.Length > 128) return new(false, false, "Сайт не вернул код входа.");
+
+            using var exchangePayload = await PostPlatformJsonAsync("/api/launcher/auth/exchange", new
+            {
+                request_id = GetQueryValue(authUri, "request_id"),
+                code,
+                code_verifier = verifier
+            }, ct);
+            var session = ParseHandoffSession(exchangePayload.RootElement);
+            if (session is null) return new(false, false, "Сайт вернул неполную сессию SubReel.");
+
+            using var validation = await SendAsync(HttpMethod.Get, "/auth/v1/user", null, session.AccessToken, ct);
+            if (validation.StatusCode == HttpStatusCode.Unauthorized)
+                return new(false, false, "Сессия SubReel истекла. Войди через сайт ещё раз.");
+            if (!validation.IsSuccessStatusCode)
+                return new(false, false, $"Не удалось проверить аккаунт SubReel (HTTP {(int)validation.StatusCode}).");
+
+            await _gate.WaitAsync(ct);
+            try
+            {
+                await SaveSessionAsync(session, ct);
+                _session = session;
+            }
+            finally { _gate.Release(); }
+            return new(true, false, "Вход через сайт выполнен.", session);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new(false, false, "Вход отменён.");
+        }
+        catch (OperationCanceledException)
+        {
+            return new(false, false, "Время ожидания входа истекло. Запусти его заново в лаунчере.");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Browser sign-in request to SubReel platform failed");
+            return new(false, false, "Не удалось связаться с сайтом SubReel. Проверь интернет и настройки Platform:WebsiteUrl.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Browser sign-in failed");
+            return new(false, false, "Не удалось завершить вход через сайт SubReel. Попробуй ещё раз.");
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
 
     public async Task<SubReelAuthResult> SignInAsync(string email, string password, CancellationToken cancellationToken = default)
     {
@@ -155,6 +260,93 @@ public sealed class SupabaseAuthService : ISubReelAuthService
         if (!string.IsNullOrWhiteSpace(accessToken)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         if (body is not null) request.Content = new StringContent(JsonSerializer.Serialize(body, JsonOptions), Encoding.UTF8, "application/json");
         return await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
+    }
+
+    private async Task<JsonDocument> PostPlatformJsonAsync(string path, object body, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient("SupabaseAuth");
+        using var request = new HttpRequestMessage(HttpMethod.Post, _websiteUrl + path)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(body, JsonOptions), Encoding.UTF8, "application/json")
+        };
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
+        var payload = await ReadPayloadAsync(response, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            payload.Dispose();
+            throw new HttpRequestException($"SubReel website returned HTTP {(int)response.StatusCode}.", null, response.StatusCode);
+        }
+        return payload;
+    }
+
+    private static async Task<LoopbackCallback> ReceiveLoopbackCallbackAsync(TcpListener listener, CancellationToken ct)
+    {
+        var client = await listener.AcceptTcpClientAsync(ct);
+        try
+        {
+            var stream = client.GetStream();
+            using var reader = new StreamReader(stream, Encoding.ASCII, detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true);
+            var requestLine = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrWhiteSpace(requestLine) || requestLine.Length > 2048)
+                throw new InvalidDataException("Invalid launcher callback request.");
+            for (var headerCount = 0; headerCount < 64; headerCount++)
+            {
+                var header = await reader.ReadLineAsync(ct);
+                if (header is null || header.Length > 8192) throw new InvalidDataException("Invalid launcher callback headers.");
+                if (header.Length == 0) break;
+            }
+
+            var parts = requestLine.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+            var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+            if (parts.Length != 3 || parts[0] != "GET" || !Uri.TryCreate($"http://127.0.0.1:{port}{parts[1]}", UriKind.Absolute, out var callback) || callback.AbsolutePath != "/callback")
+                throw new InvalidDataException("Unexpected launcher callback path.");
+            return new LoopbackCallback(client, callback);
+        }
+        catch
+        {
+            client.Dispose();
+            throw;
+        }
+    }
+
+    private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static string? GetString(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static string? GetQueryValue(Uri uri, string name)
+    {
+        var query = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var pair in query)
+        {
+            var parts = pair.Split('=', 2);
+            if (Uri.UnescapeDataString(parts[0]) == name)
+                return parts.Length == 2 ? Uri.UnescapeDataString(parts[1]) : string.Empty;
+        }
+        return null;
+    }
+
+    private static SubReelAuthSession? ParseHandoffSession(JsonElement root)
+    {
+        if (!TryString(root, "access_token", out var access) || !TryString(root, "refresh_token", out var refresh) ||
+            !root.TryGetProperty("expires_in", out var expires) || !expires.TryGetInt32(out var seconds) ||
+            !root.TryGetProperty("user", out var user) || !TryString(user, "id", out var userId))
+            return null;
+        var email = TryString(user, "email", out var emailValue) ? emailValue : null;
+        return new(access, refresh, DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(seconds, 60, 86400)), userId, email);
+    }
+
+    private static async Task WriteCallbackResponseAsync(NetworkStream responseStream, string message, CancellationToken ct)
+    {
+        await using var response = responseStream;
+        var html = $"<!doctype html><html lang=\"ru\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>SubReel Launcher</title><body style=\"font:16px system-ui;background:#0b0b12;color:#eee;display:grid;place-items:center;min-height:90vh\"><main><h1>SubReel Launcher</h1><p>{System.Net.WebUtility.HtmlEncode(message)}</p></main></body></html>";
+        var bytes = Encoding.UTF8.GetBytes(html);
+        var header = Encoding.ASCII.GetBytes($"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: {bytes.Length}\r\n\r\n");
+        await response.WriteAsync(header, ct);
+        await response.WriteAsync(bytes, ct);
     }
 
     private static async Task<JsonDocument> ReadPayloadAsync(HttpResponseMessage response, CancellationToken ct)

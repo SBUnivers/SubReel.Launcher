@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "i9NdVrfRbnE=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Nikita\\source\\SubReel.Launcher\\src\\SubReel.Launcher.Core\\SubReel.Launcher.Core.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Nikita\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.13\\microsoft.extensions.dependencyinjection.abstractions.10.0.13.nupkg.sha512",
+    "C:\\Users\\Nikita\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.13\\microsoft.extensions.logging.abstractions.10.0.13.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -106,6 +106,7 @@ public sealed class JsonSettingsService(IAppPaths paths, ILogger<JsonSettingsSer
         Migrate(settings);
         settings.DefaultMemoryMb = Math.Clamp(settings.DefaultMemoryMb, 512, 65536);
         settings.MaxConcurrentDownloads = Math.Clamp(settings.MaxConcurrentDownloads, 1, 32);
+        settings.TextScale = double.IsFinite(settings.TextScale) ? Math.Clamp(settings.TextScale, 0.85, 1.25) : 1d;
     }
 
     private static void Migrate(LauncherSettings settings)

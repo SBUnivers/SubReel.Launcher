@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "GchLUnTq35k=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Nikita\\source\\SubReel.Launcher\\src\\SubReel.Launcher.Abstractions\\SubReel.Launcher.Abstractions.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Nikita\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.13\\microsoft.extensions.dependencyinjection.abstractions.10.0.13.nupkg.sha512"
+  ],
+  "logs": []
+}

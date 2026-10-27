@@ -24,8 +24,30 @@ public sealed class PageTransitionControl : ContentControl
     protected override void OnContentChanged(object oldContent, object newContent)
     {
         var image = _snapshot;
+        var level = Application.Current.Resources["MotionLevel"] is MotionLevel configuredLevel
+            ? configuredLevel
+            : MotionLevel.Full;
+
+        if (level == MotionLevel.Off)
+        {
+            base.OnContentChanged(oldContent, newContent);
+            if (image is not null)
+            {
+                image.BeginAnimation(OpacityProperty, null);
+                image.Source = null;
+                image.Visibility = Visibility.Collapsed;
+            }
+            if (_presenter is not null)
+            {
+                _presenter.BeginAnimation(OpacityProperty, null);
+                _presenter.Opacity = 1;
+                _presenter.RenderTransform = Transform.Identity;
+            }
+            return;
+        }
+
         BitmapSource? previousFrame = null;
-        if (oldContent is not null && _presenter is { ActualWidth: > 0, ActualHeight: > 0 } presenter)
+        if (image is not null && oldContent is not null && _presenter is { ActualWidth: > 0, ActualHeight: > 0 } presenter)
         {
             var dpi = VisualTreeHelper.GetDpi(presenter);
             var bitmap = new RenderTargetBitmap(
@@ -45,8 +67,8 @@ public sealed class PageTransitionControl : ContentControl
             image.Opacity = 1;
             image.Visibility = Visibility.Visible;
             var milliseconds = Application.Current.Resources["MotionNormalMs"] is double value ? value : 250;
-            var level = Application.Current.Resources["MotionLevel"] is MotionLevel configuredLevel ? configuredLevel : MotionLevel.Full;
-            var multiplier = level switch { MotionLevel.Reduced => 0.5, MotionLevel.Off => 0, _ => 1 };
+            var currentLevel = Application.Current.Resources["MotionLevel"] is MotionLevel activeLevel ? activeLevel : MotionLevel.Full;
+            var multiplier = currentLevel switch { MotionLevel.Reduced => 0.5, MotionLevel.Off => 0, _ => 1 };
             var duration = TimeSpan.FromMilliseconds(milliseconds * multiplier);
             if (duration == TimeSpan.Zero)
             {
@@ -121,7 +143,19 @@ public static class MotionBehaviors
         if (group is null) { group = new TransformGroup(); group.Children.Add(new ScaleTransform(1, 1)); group.Children.Add(new TranslateTransform()); element.RenderTransform = group; }
         if (group.Children[0] is ScaleTransform scaler && group.Children[1] is TranslateTransform mover)
         {
+            var level = Application.Current.Resources["MotionLevel"] is MotionLevel configuredLevel ? configuredLevel : MotionLevel.Full;
+            if (level == MotionLevel.Off)
+            {
+                scaler.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                scaler.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                mover.BeginAnimation(TranslateTransform.YProperty, null);
+                scaler.ScaleX = scaler.ScaleY = 1;
+                mover.Y = 0;
+                return;
+            }
+
             var ms = Application.Current.Resources["MotionFastMs"] is double duration ? duration : 150;
+            if (level == MotionLevel.Reduced) ms *= 0.5;
             var ease = Application.Current.Resources["EaseInOut"] as IEasingFunction;
             scaler.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(scale, TimeSpan.FromMilliseconds(ms)) { EasingFunction = ease });
             scaler.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(scale, TimeSpan.FromMilliseconds(ms)) { EasingFunction = ease });
@@ -170,11 +204,25 @@ public static class MotionBehaviors
     private static void StaggerContainers(ItemsControl owner)
     {
         if (owner.ItemContainerGenerator.Status != GeneratorStatus.ContainersGenerated) return;
+        var level = Application.Current.Resources["MotionLevel"] is MotionLevel configuredLevel
+            ? configuredLevel
+            : MotionLevel.Full;
+        if (level == MotionLevel.Off)
+        {
+            for (var i = 0; i < owner.Items.Count; i++)
+            {
+                if (owner.ItemContainerGenerator.ContainerFromIndex(i) is not FrameworkElement container) continue;
+                container.BeginAnimation(UIElement.OpacityProperty, null);
+                container.Opacity = 1;
+            }
+            return;
+        }
+
         for (var i = 0; i < owner.Items.Count; i++)
         {
             if (owner.ItemContainerGenerator.ContainerFromIndex(i) is not FrameworkElement container) continue;
             container.Opacity = 0;
-            var delay = TimeSpan.FromMilliseconds(i * 40);
+            var delay = TimeSpan.FromMilliseconds(i * (level == MotionLevel.Reduced ? 20 : 40));
             container.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, Duration(TimeSpan.FromMilliseconds(250))) { BeginTime = delay, EasingFunction = Application.Current.Resources["EaseOut"] as IEasingFunction });
         }
     }
@@ -184,7 +232,12 @@ public static class MotionBehaviors
         if (d is not UIElement element) return;
         if ((bool)e.NewValue)
         {
-            if (!AnimationsEnabled) { element.Opacity = 0.65; return; }
+            element.BeginAnimation(UIElement.OpacityProperty, null);
+            if (!AnimationsEnabled || Application.Current.Resources["MotionLevel"] is MotionLevel.Reduced)
+            {
+                element.Opacity = 0.65;
+                return;
+            }
             element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.35, 0.8, TimeSpan.FromMilliseconds(900)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
         }
         else { element.BeginAnimation(UIElement.OpacityProperty, null); element.Opacity = 1; }

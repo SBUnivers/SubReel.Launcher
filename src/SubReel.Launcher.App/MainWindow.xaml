@@ -3,37 +3,40 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:design="clr-namespace:SubReel.Launcher.App.DesignSystem"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="SubReel Launcher" Width="1180" Height="760" MinWidth="900" MinHeight="620"
+        Title="SubReel Launcher" Width="1180" Height="760" MinWidth="820" MinHeight="560"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource AppBackground}">
     <Window.Resources>
         <design:MinecraftFaceConverter x:Key="MinecraftFaceConverter"/>
+        <design:IconGeometryConverter x:Key="IconGeometryConverter"/>
     </Window.Resources>
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="62" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
     <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="78"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Background="#D910111A" BorderBrush="#1FFFFFFF" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
             <DockPanel Margin="10,14">
                 <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center">
                     <Border Width="42" Height="42" CornerRadius="14" Background="{DynamicResource AccentBrush}">
-                        <TextBlock Text="S" FontSize="23" FontWeight="Black" Foreground="#100D19" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="S" FontSize="{design:ScaledFontSize 23}" FontWeight="Black" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,16,0,0">
-                    <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" ToolTip="Лаунчер запущен"/>
-                    <Button Width="44" Height="44" Padding="0" Margin="0,16,0,0" Background="{DynamicResource CardRaisedBackground}" BorderBrush="#36FFFFFF"
-                            Click="AccountMenu_Click" ToolTip="{Binding AccountText}">
+                    <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" ToolTip="{DynamicResource Shell.Running}"/>
+                    <Button Width="44" Height="44" Padding="0" Margin="0,16,0,0" Background="{DynamicResource CardRaisedBackground}" BorderBrush="{DynamicResource GlassBorderBrush}"
+                            Click="AccountMenu_Click" ToolTip="{Binding AccountText}"
+                            AutomationProperties.Name="{DynamicResource Shell.GameAccount}"
+                            AutomationProperties.HelpText="{DynamicResource Shell.OpenAccountMenu}">
                         <Grid Width="44" Height="44">
-                            <TextBlock Text="◉" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource IconAccountGeometry}" Width="20" Height="20" Stretch="Uniform" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.8"/>
                             <Image Source="{Binding ActiveAccount.SkinPath, Converter={StaticResource MinecraftFaceConverter}}" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
                         </Grid>
                         <Button.ContextMenu>
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                <MenuItem Header="Добавить Microsoft" Command="{Binding AddMicrosoftAccountCommand}" IsEnabled="{Binding CanSignInMicrosoft}"/>
-                                <MenuItem Header="Добавить офлайн" Command="{Binding AddOfflineAccountCommand}"/>
+                                <MenuItem Header="{DynamicResource Shell.AddMicrosoft}" Command="{Binding AddMicrosoftAccountCommand}" IsEnabled="{Binding CanSignInMicrosoft}"/>
+                                <MenuItem Header="{DynamicResource Shell.AddOffline}" Command="{Binding AddOfflineAccountCommand}"/>
                                 <Separator/>
-                                <MenuItem Header="Выбрать аккаунт" ItemsSource="{Binding Accounts}">
+                                <MenuItem Header="{DynamicResource Shell.SelectAccount}" ItemsSource="{Binding Accounts}">
                                     <MenuItem.ItemContainerStyle>
                                         <Style TargetType="MenuItem">
                                             <Setter Property="Header" Value="{Binding Username}"/>
@@ -42,7 +45,7 @@
                                         </Style>
                                     </MenuItem.ItemContainerStyle>
                                 </MenuItem>
-                                <MenuItem Header="Удалить аккаунт" ItemsSource="{Binding Accounts}">
+                                <MenuItem Header="{DynamicResource Shell.RemoveAccount}" ItemsSource="{Binding Accounts}">
                                     <MenuItem.ItemContainerStyle>
                                         <Style TargetType="MenuItem">
                                             <Setter Property="Header" Value="{Binding Username}"/>
@@ -52,19 +55,21 @@
                                     </MenuItem.ItemContainerStyle>
                                 </MenuItem>
                                 <Separator/>
-                                <MenuItem Header="Выйти из активного аккаунта" Command="{Binding SignOutCommand}"/>
+                                <MenuItem Header="{DynamicResource Shell.SignOut}" Command="{Binding SignOutCommand}"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
-                    <TextBlock Text="0.1.0" FontSize="9" Foreground="#666476" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                    <TextBlock Text="0.1.0" FontSize="{design:ScaledFontSize 9}" Foreground="{DynamicResource TextTertiary}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                 </StackPanel>
                 <ItemsControl ItemsSource="{Binding NavigationItems}" Margin="0,28,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding Key}" Width="48" Height="46" Padding="0" Margin="0,3"
-                                    Background="Transparent" BorderThickness="0" ToolTip="{Binding Title}">
-                                <TextBlock Text="{Binding Icon}" FontSize="21" Foreground="#C8C3D5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    Background="Transparent" BorderThickness="0" ToolTip="{Binding Title}"
+                                    AutomationProperties.Name="{Binding Title}"
+                                    AutomationProperties.HelpText="{DynamicResource Window.Navigate}">
+                                <Path Data="{Binding Icon, Converter={StaticResource IconGeometryConverter}}" Width="21" Height="21" Stretch="Uniform" Fill="Transparent" Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <Button.Template><ControlTemplate TargetType="Button">
                                     <Border x:Name="NavIcon" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="14">
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -83,21 +88,27 @@
 
         <Grid Grid.Column="1">
             <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/><RowDefinition Height="30"/></Grid.RowDefinitions>
-            <Border Grid.Row="0" BorderBrush="#18FFFFFF" BorderThickness="0,0,0,1" Background="#18000000">
+            <Border Grid.Row="0" BorderBrush="{DynamicResource GlassBorderSubtleBrush}" BorderThickness="0,0,0,1" Background="{DynamicResource SidebarBackground}">
                 <DockPanel Margin="26,0" LastChildFill="False">
-                    <TextBlock Text="{Binding PageTitle}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding PageTitle}" FontSize="{design:ScaledFontSize 16}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding AccountText}" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                        <Button Content="—" Click="Minimize_Click" Style="{StaticResource IconButton}" Margin="16,0,4,0" ToolTip="Свернуть" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button x:Name="MaximizeButton" Content="□" Click="Maximize_Click" Style="{StaticResource IconButton}" Margin="0,0,4,0" ToolTip="Развернуть" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button Content="×" Click="Close_Click" Style="{StaticResource IconButton}" ToolTip="Закрыть" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <TextBlock Text="{Binding AccountText}" FontSize="{design:ScaledFontSize 11}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                        <Button Click="Minimize_Click" Style="{StaticResource IconButton}" Margin="16,0,4,0" ToolTip="{DynamicResource Window.Minimize}" AutomationProperties.Name="{DynamicResource Window.Minimize}" shell:WindowChrome.IsHitTestVisibleInChrome="True"><Path Data="{StaticResource IconMinimizeGeometry}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource TextPrimary}" StrokeThickness="1.5"/></Button>
+                        <Button x:Name="MaximizeButton" Click="Maximize_Click" Style="{StaticResource IconButton}" Margin="0,0,4,0" ToolTip="{DynamicResource Window.Maximize}" AutomationProperties.Name="{DynamicResource Window.Maximize}" shell:WindowChrome.IsHitTestVisibleInChrome="True"><Path x:Name="MaximizeIcon" Data="{StaticResource IconMaximizeGeometry}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource TextPrimary}" StrokeThickness="1.5"/></Button>
+                        <Button Click="Close_Click" Style="{StaticResource IconButton}" ToolTip="{DynamicResource Window.Close}" AutomationProperties.Name="{DynamicResource Window.Close}" shell:WindowChrome.IsHitTestVisibleInChrome="True"><Path Data="{StaticResource IconCloseGeometry}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource TextPrimary}" StrokeThickness="1.5"/></Button>
                     </StackPanel>
                 </DockPanel>
             </Border>
             <design:PageTransitionControl Grid.Row="1" Content="{Binding CurrentViewModel}"/>
-            <Border Grid.Row="2" Background="#15141D" BorderBrush="#18FFFFFF" BorderThickness="0,1,0,0">
-                <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextSecondary}" FontSize="10" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis"/>
+            <Border Grid.Row="2" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource GlassBorderSubtleBrush}" BorderThickness="0,1,0,0">
+                <Grid Margin="16,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="{DynamicResource TextSecondary}" FontSize="{design:ScaledFontSize 10}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    <Button Grid.Column="1" Content="{DynamicResource Shell.CancelLaunch}" Command="{Binding CancelActiveLaunchCommand}"
+                            Style="{StaticResource SecondaryButton}" Padding="8,2" Margin="8,0,0,0"
+                            Visibility="{Binding HasCancelableLaunch, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

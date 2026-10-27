@@ -8,6 +8,7 @@ public sealed class LauncherSettings
     public int MaxConcurrentDownloads { get; set; } = 8;
     public string? JavaPath { get; set; }
     public string AccentColor { get; set; } = "#8875FF";
+    public double TextScale { get; set; } = 1d;
     public bool ReduceAnimations { get; set; }
     public string WindowBackdrop { get; set; } = "Mica";
     public string Language { get; set; } = "ru-RU";

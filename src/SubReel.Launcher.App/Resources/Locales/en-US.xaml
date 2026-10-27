@@ -1,0 +1,542 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String x:Key="Nav.home" xmlns:sys="clr-namespace:System;assembly=mscorlib">Home</sys:String>
+    <sys:String x:Key="Nav.home.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a Minecraft version and launch the game.</sys:String>
+    <sys:String x:Key="News.DateCulture" xmlns:sys="clr-namespace:System;assembly=mscorlib">en-US</sys:String>
+    <sys:String x:Key="News.DateFormat" xmlns:sys="clr-namespace:System;assembly=mscorlib">MMM d, yyyy</sys:String>
+    <sys:String x:Key="News.Channel.Beta" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher beta</sys:String>
+    <sys:String x:Key="News.Channel.Release" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher release</sys:String>
+    <sys:String x:Key="News.Tag.Server" xmlns:sys="clr-namespace:System;assembly=mscorlib">Server</sys:String>
+    <sys:String x:Key="News.Tag.Event" xmlns:sys="clr-namespace:System;assembly=mscorlib">Event</sys:String>
+    <sys:String x:Key="News.Tag.Launcher" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher</sys:String>
+    <sys:String x:Key="Shell.Launch.InstanceStatus" xmlns:sys="clr-namespace:System;assembly=mscorlib">{0}: {1}</sys:String>
+    <sys:String x:Key="Shell.Launch.Preparing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing Minecraft {0}…</sys:String>
+    <sys:String x:Key="Shell.Launch.InstallingLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installing Minecraft loader…</sys:String>
+    <sys:String x:Key="Shell.Launch.Downloading" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloading Minecraft files…</sys:String>
+    <sys:String x:Key="Shell.Launch.Starting" xmlns:sys="clr-namespace:System;assembly=mscorlib">Starting Minecraft…</sys:String>
+    <sys:String x:Key="Shell.Launch.Running" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft is running.</sys:String>
+    <sys:String x:Key="Shell.Launch.Exited" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft closed.</sys:String>
+    <sys:String x:Key="Shell.Launch.Canceled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launch cancelled.</sys:String>
+    <sys:String x:Key="Shell.CancelLaunch" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel launch</sys:String>
+    <sys:String x:Key="Shell.Launch.Crashed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft exited with code {0}.</sys:String>
+    <sys:String x:Key="Shell.Launch.CrashedReport" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft exited with code {0}. Report: {1}</sys:String>
+    <sys:String x:Key="Shell.Launch.Failed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not launch Minecraft: {0}</sys:String>
+    <sys:String x:Key="Auth.Status.StoreOpenFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not open the purchase page: {0}</sys:String>
+    <sys:String x:Key="Auth.Status.SupabaseNotConfigured" xmlns:sys="clr-namespace:System;assembly=mscorlib">Supabase is not configured. Set Platform:SupabaseUrl and Platform:SupabasePublishableKey in appsettings.json.</sys:String>
+    <sys:String x:Key="Auth.GameProfile.None" xmlns:sys="clr-namespace:System;assembly=mscorlib">No game profile selected.</sys:String>
+    <sys:String x:Key="Auth.GameProfile.Microsoft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Current profile: {0} · Microsoft</sys:String>
+    <sys:String x:Key="Auth.GameProfile.Offline" xmlns:sys="clr-namespace:System;assembly=mscorlib">Current profile: {0} · offline · license not verified</sys:String>
+    <sys:String x:Key="Auth.Status.AccountCheckTimeout" xmlns:sys="clr-namespace:System;assembly=mscorlib">Account check took too long. Check your connection and press “Refresh”.</sys:String>
+    <sys:String x:Key="Auth.Status.Cancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Operation cancelled.</sys:String>
+    <sys:String x:Key="Auth.Status.SignedOut" xmlns:sys="clr-namespace:System;assembly=mscorlib">Signed out of SubReel. Your Minecraft account was not changed.</sys:String>
+    <sys:String x:Key="Auth.Status.GameAccountUnchangedSignIn" xmlns:sys="clr-namespace:System;assembly=mscorlib">Your game account was not changed. Sign in to SubReel to manage its link.</sys:String>
+    <sys:String x:Key="Auth.Status.AccountUpdated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Account information updated.</sys:String>
+    <sys:String x:Key="Auth.Status.CurrentProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">Current profile: {0}&#10;UUID: {1}</sys:String>
+    <sys:String x:Key="Auth.Status.MicrosoftSignInSuccess" xmlns:sys="clr-namespace:System;assembly=mscorlib">Microsoft sign-in succeeded and a Java Edition profile was found. You can link it to SubReel separately.</sys:String>
+    <sys:String x:Key="Auth.Status.MicrosoftSignInSuccessShort" xmlns:sys="clr-namespace:System;assembly=mscorlib">Microsoft sign-in succeeded and a Java Edition profile was found.</sys:String>
+    <sys:String x:Key="Auth.Status.ServicesProfileConfirmed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft Services confirmed access to the Java Edition profile.</sys:String>
+    <sys:String x:Key="Auth.Status.OfflineIsNotLicense" xmlns:sys="clr-namespace:System;assembly=mscorlib">The Java Edition profile is not verified. Offline mode is not a license.</sys:String>
+    <sys:String x:Key="Auth.Status.StoreOpened" xmlns:sys="clr-namespace:System;assembly=mscorlib">Opened the official Minecraft Java &amp; Bedrock Edition page. After purchase, sign in with the same Microsoft account and check the license.</sys:String>
+    <sys:String x:Key="Auth.OfflinePrompt" xmlns:sys="clr-namespace:System;assembly=mscorlib">Username: 3–16 characters, Latin letters, digits, and _.</sys:String>
+    <sys:String x:Key="Auth.OfflineAddTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add offline profile</sys:String>
+    <sys:String x:Key="Auth.Status.OfflineAdded" xmlns:sys="clr-namespace:System;assembly=mscorlib">Offline profile added. It does not verify a Java Edition license and cannot be linked as a licensed profile.</sys:String>
+    <sys:String x:Key="Auth.Status.AccountSelectedCheckLicense" xmlns:sys="clr-namespace:System;assembly=mscorlib">Account selected. Check the license for this profile.</sys:String>
+    <sys:String x:Key="Auth.Status.SignInBeforeLink" xmlns:sys="clr-namespace:System;assembly=mscorlib">First sign in to SubReel on the “SubReel profile” tab.</sys:String>
+    <sys:String x:Key="Auth.Status.SelectLicensedAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a verified Minecraft Java Microsoft account. Offline profiles cannot be linked.</sys:String>
+    <sys:String x:Key="Auth.Confirm.ReplaceLink" xmlns:sys="clr-namespace:System;assembly=mscorlib">The SubReel account is already linked to {0}.&#10;&#10;Replace it with {1}?</sys:String>
+    <sys:String x:Key="Auth.Confirm.ReplaceLinkTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Replace linked profile</sys:String>
+    <sys:String x:Key="Auth.Status.LinkUnchanged" xmlns:sys="clr-namespace:System;assembly=mscorlib">The link was not changed.</sys:String>
+    <sys:String x:Key="Auth.Status.LinkedProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">Linked: {0}&#10;UUID: {1}&#10;Status: Microsoft / Minecraft Java</sys:String>
+    <sys:String x:Key="Auth.Status.ProfileLinked" xmlns:sys="clr-namespace:System;assembly=mscorlib">The game profile is linked to this SubReel account. Game tokens were not sent to Supabase.</sys:String>
+    <sys:String x:Key="Auth.Confirm.Unlink" xmlns:sys="clr-namespace:System;assembly=mscorlib">Unlink the game profile from SubReel? Your Minecraft account will remain in the launcher.</sys:String>
+    <sys:String x:Key="Auth.Confirm.UnlinkTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Unlink profile</sys:String>
+    <sys:String x:Key="Auth.Status.ProfileNotLinked" xmlns:sys="clr-namespace:System;assembly=mscorlib">No game profile is linked.</sys:String>
+    <sys:String x:Key="Auth.Status.ProfileUnlinked" xmlns:sys="clr-namespace:System;assembly=mscorlib">The link was removed. Your Minecraft account was not changed.</sys:String>
+    <sys:String x:Key="Auth.Status.ProfileNotLinkedToAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">No game profile is linked to this SubReel account.</sys:String>
+    <sys:String x:Key="Auth.Status.LinkedProfileShort" xmlns:sys="clr-namespace:System;assembly=mscorlib">Linked: {0} ({1})</sys:String>
+    <sys:String x:Key="Auth.Status.ProfileMigrationRequired" xmlns:sys="clr-namespace:System;assembly=mscorlib">Profile linking requires migration supabase/sql/032_launcher_game_profiles.sql from subreel-platform.</sys:String>
+    <sys:String x:Key="Auth.Status.ProfileCheckFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not check profile link: {0}</sys:String>
+    <sys:String x:Key="Auth.Status.SubReelSignedIn" xmlns:sys="clr-namespace:System;assembly=mscorlib">Signed in to SubReel: {0}.</sys:String>
+    <sys:String x:Key="Mods.Status.InstanceInstalled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance ‘{0}’ was added to My Instances ({1}, Minecraft {2}). Game files will be prepared on first launch.</sys:String>
+    <sys:String x:Key="Home.Channel.OldAlpha" xmlns:sys="clr-namespace:System;assembly=mscorlib">OLD ALPHA</sys:String>
+    <sys:String x:Key="Home.Channel.OldBeta" xmlns:sys="clr-namespace:System;assembly=mscorlib">OLD BETA</sys:String>
+    <sys:String x:Key="Home.Family.26.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft 26</sys:String>
+    <sys:String x:Key="Home.Family.26.Tagline" xmlns:sys="clr-namespace:System;assembly=mscorlib">A NEW GENERATION</sys:String>
+    <sys:String x:Key="Home.Family.1.21.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Tricky Trials</sys:String>
+    <sys:String x:Key="Home.Family.1.21.Tagline" xmlns:sys="clr-namespace:System;assembly=mscorlib">TRIALS AWAIT</sys:String>
+    <sys:String x:Key="Home.Family.1.20.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Trails &amp; Tales</sys:String>
+    <sys:String x:Key="Home.Family.1.20.Tagline" xmlns:sys="clr-namespace:System;assembly=mscorlib">TRAILS &amp; TALES</sys:String>
+    <sys:String x:Key="Home.Family.1.19.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">The Wild Update</sys:String>
+    <sys:String x:Key="Home.Family.1.19.Tagline" xmlns:sys="clr-namespace:System;assembly=mscorlib">THE WILD UPDATE</sys:String>
+    <sys:String x:Key="Home.Family.1.18.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Caves &amp; Cliffs</sys:String>
+    <sys:String x:Key="Home.Family.1.18.Tagline" xmlns:sys="clr-namespace:System;assembly=mscorlib">CAVES &amp; CLIFFS</sys:String>
+    <sys:String x:Key="Mods.NewInstanceDefault" xmlns:sys="clr-namespace:System;assembly=mscorlib">My modpack</sys:String>
+    <sys:String x:Key="Mods.Status.NoResults" xmlns:sys="clr-namespace:System;assembly=mscorlib">No modpacks matched this search.</sys:String>
+    <sys:String x:Key="Mods.Status.InstanceCreated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance ‘{0}’ was created. Find it under My Instances.</sys:String>
+    <sys:String x:Key="Mods.Status.SearchResults" xmlns:sys="clr-namespace:System;assembly=mscorlib">Found: {0}. Shown: {1}.</sys:String>
+    <sys:String x:Key="Mods.Status.NoProjectVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">This project has no published modpack versions yet.</sys:String>
+    <sys:String x:Key="Mods.Status.ProjectVersionsAvailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modpack versions: {0}. Installed versions are marked in the list.</sys:String>
+    <sys:String x:Key="Mods.Status.ProjectVersionsUpdate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modpack versions: {0}. Updates install as a separate instance; the current instance remains unchanged.</sys:String>
+    <sys:String x:Key="Mods.Status.TranslationUnavailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">Automatic translation is unavailable: {0}</sys:String>
+    <sys:String x:Key="Instances.NewInstanceDefault" xmlns:sys="clr-namespace:System;assembly=mscorlib">My instance</sys:String>
+    <sys:String x:Key="Instances.ConfirmDelete" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete instance ‘{0}’?</sys:String>
+    <sys:String x:Key="Instances.ConfirmDeleteYes" xmlns:sys="clr-namespace:System;assembly=mscorlib">Yes — also delete its game folder and files.</sys:String>
+    <sys:String x:Key="Instances.ConfirmDeleteNo" xmlns:sys="clr-namespace:System;assembly=mscorlib">No — delete only the entry and keep files.</sys:String>
+    <sys:String x:Key="Instances.ConfirmDeleteCancel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel — make no changes.</sys:String>
+    <sys:String x:Key="Instances.DeleteTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete instance</sys:String>
+    <sys:String x:Key="Instances.ConfirmDuplicate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create a clean copy of ‘{0}’? Profile settings will be kept, and the game folder will be new and empty.</sys:String>
+    <sys:String x:Key="Instances.DuplicateTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Duplicate instance</sys:String>
+    <sys:String x:Key="Instances.ExportTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Export instance manifest</sys:String>
+    <sys:String x:Key="Instances.ImportTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Import SubReel modpack manifest</sys:String>
+    <sys:String x:Key="Instances.ManifestFilter" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel manifest (*.json)|*.json</sys:String>
+    <sys:String x:Key="Section.PlaceholderTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Coming soon</sys:String>
+    <sys:String x:Key="Section.PlaceholderMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">This section's content will appear here.</sys:String>
+    <sys:String x:Key="Auth.MinecraftJavaTab" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft Java</sys:String>
+    <sys:String x:Key="Shell.ActiveGame" xmlns:sys="clr-namespace:System;assembly=mscorlib">Game: {0} · {1}</sys:String>
+    <sys:String x:Key="Shell.ActiveGames" xmlns:sys="clr-namespace:System;assembly=mscorlib">Games running: {0}</sys:String>
+    <sys:String x:Key="Account.OfflinePrompt" xmlns:sys="clr-namespace:System;assembly=mscorlib">Username: 3–16 characters, Latin letters, digits, and _.</sys:String>
+    <sys:String x:Key="Account.AddOfflineTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add offline account</sys:String>
+    <sys:String x:Key="Account.OfflineTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Offline account</sys:String>
+    <sys:String x:Key="Account.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Account</sys:String>
+    <sys:String x:Key="Account.RemoveConfirm" xmlns:sys="clr-namespace:System;assembly=mscorlib">Remove account {0} from the launcher?</sys:String>
+    <sys:String x:Key="Account.RemoveTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Remove account</sys:String>
+    <sys:String x:Key="Home.SelectVersionHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a version on the left.</sys:String>
+    <sys:String x:Key="Home.LatestVersionLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Latest version {0}</sys:String>
+    <sys:String x:Key="Home.VersionWillPrepare" xmlns:sys="clr-namespace:System;assembly=mscorlib">Version {0} will be prepared</sys:String>
+    <sys:String x:Key="Home.Status.LoadingOfficialVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading the official Minecraft version list…</sys:String>
+    <sys:String x:Key="Home.Status.LoadingVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading Minecraft versions…</sys:String>
+    <sys:String x:Key="Home.Status.SelectVersionForLoaders" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a game version to check available loaders.</sys:String>
+    <sys:String x:Key="Home.Status.VersionsUpdated" xmlns:sys="clr-namespace:System;assembly=mscorlib">The version list was updated from the Minecraft manifest.</sys:String>
+    <sys:String x:Key="Home.Status.NoReleases" xmlns:sys="clr-namespace:System;assembly=mscorlib">No Minecraft releases were found.</sys:String>
+    <sys:String x:Key="Home.Status.ManifestUnavailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">The manifest is unavailable and no valid local cache was found.</sys:String>
+    <sys:String x:Key="Home.Status.LoadersChecked" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loader compatibility checked.</sys:String>
+    <sys:String x:Key="Home.Status.LoaderAvailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">Available for the selected version.</sys:String>
+    <sys:String x:Key="Home.Status.LaunchCancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launch cancelled.</sys:String>
+    <sys:String x:Key="Home.Status.ManifestUpdated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mojang manifest updated {0}</sys:String>
+    <sys:String x:Key="Home.Status.CachedManifest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Local version cache · updated {0}</sys:String>
+    <sys:String x:Key="Home.Status.OfflineManifest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not connect to Mojang · local cache from {0}</sys:String>
+    <sys:String x:Key="Home.ManifestDateFormat" xmlns:sys="clr-namespace:System;assembly=mscorlib">MMM d, yyyy HH:mm</sys:String>
+    <sys:String x:Key="Home.Status.UnknownDate" xmlns:sys="clr-namespace:System;assembly=mscorlib">an unknown date</sys:String>
+    <sys:String x:Key="Home.Status.Now" xmlns:sys="clr-namespace:System;assembly=mscorlib">now</sys:String>
+    <sys:String x:Key="Home.Status.Preparing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing Minecraft {0}…</sys:String>
+    <sys:String x:Key="Home.Status.InstallingLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installing loader: {0}</sys:String>
+    <sys:String x:Key="Home.Status.DownloadingFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloading Minecraft files…</sys:String>
+    <sys:String x:Key="Home.Status.StartingGame" xmlns:sys="clr-namespace:System;assembly=mscorlib">Starting Minecraft…</sys:String>
+    <sys:String x:Key="Home.Status.Running" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft is running.</sys:String>
+    <sys:String x:Key="Home.Status.CheckingLoaders" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking loaders for Minecraft {0}…</sys:String>
+    <sys:String x:Key="Home.Status.GameStarted" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft {0} started (PID {1}).</sys:String>
+    <sys:String x:Key="Home.Status.ManifestLoadFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load the Minecraft manifest: {0}</sys:String>
+    <sys:String x:Key="Home.Status.LaunchFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not launch the game: {0}</sys:String>
+    <sys:String x:Key="Home.Status.LoaderCheckFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not check loaders: {0}. Vanilla remains available.</sys:String>
+    <sys:String x:Key="Home.Version.Latest" xmlns:sys="clr-namespace:System;assembly=mscorlib">LATEST</sys:String>
+    <sys:String x:Key="Home.Version.Snapshot" xmlns:sys="clr-namespace:System;assembly=mscorlib">SNAPSHOT</sys:String>
+    <sys:String x:Key="InstanceCard.FavoriteTooltip" xmlns:sys="clr-namespace:System;assembly=mscorlib">Toggle favorite</sys:String>
+    <sys:String x:Key="InstanceCard.FavoriteName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Favorite instance</sys:String>
+    <sys:String x:Key="InstanceCard.MinecraftVersionPrefix" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft </sys:String>
+    <sys:String x:Key="InstanceCard.FavoriteHelp" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add this instance to favorites or remove it</sys:String>
+    <sys:String x:Key="DesignSystem.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Design system</sys:String>
+    <sys:String x:Key="DesignSystem.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel theme component showcase. Accent changes are saved locally.</sys:String>
+    <sys:String x:Key="DesignSystem.AccentColor" xmlns:sys="clr-namespace:System;assembly=mscorlib">Accent color</sys:String>
+    <sys:String x:Key="DesignSystem.Violet" xmlns:sys="clr-namespace:System;assembly=mscorlib">Violet</sys:String>
+    <sys:String x:Key="DesignSystem.Cyan" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cyan</sys:String>
+    <sys:String x:Key="DesignSystem.Amber" xmlns:sys="clr-namespace:System;assembly=mscorlib">Amber</sys:String>
+    <sys:String x:Key="DesignSystem.ButtonsStates" xmlns:sys="clr-namespace:System;assembly=mscorlib">Buttons and states</sys:String>
+    <sys:String x:Key="DesignSystem.Primary" xmlns:sys="clr-namespace:System;assembly=mscorlib">Primary</sys:String>
+    <sys:String x:Key="DesignSystem.Secondary" xmlns:sys="clr-namespace:System;assembly=mscorlib">Secondary</sys:String>
+    <sys:String x:Key="DesignSystem.Disabled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Disabled</sys:String>
+    <sys:String x:Key="DesignSystem.VectorIconExample" xmlns:sys="clr-namespace:System;assembly=mscorlib">Vector icon example</sys:String>
+    <sys:String x:Key="DesignSystem.Forms" xmlns:sys="clr-namespace:System;assembly=mscorlib">Forms and options</sys:String>
+    <sys:String x:Key="DesignSystem.InputField" xmlns:sys="clr-namespace:System;assembly=mscorlib">Input field</sys:String>
+    <sys:String x:Key="DesignSystem.EnableOption" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enable option</sys:String>
+    <sys:String x:Key="DesignSystem.Memory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory: 4096 MB</sys:String>
+    <sys:String x:Key="DesignSystem.Motion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Motion and animations</sys:String>
+    <sys:String x:Key="DesignSystem.ReduceMotion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reduce animations</sys:String>
+    <sys:String x:Key="DesignSystem.HoverHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Hover over me</sys:String>
+    <sys:String x:Key="ErrorDetails.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel Launcher error</sys:String>
+    <sys:String x:Key="ErrorDetails.Heading" xmlns:sys="clr-namespace:System;assembly=mscorlib">An error occurred</sys:String>
+    <sys:String x:Key="ErrorDetails.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">You can copy the diagnostic details and send them to the developers.</sys:String>
+    <sys:String x:Key="ErrorDetails.Copy" xmlns:sys="clr-namespace:System;assembly=mscorlib">Copy diagnostics</sys:String>
+    <sys:String x:Key="Common.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Close</sys:String>
+    <sys:String x:Key="Nav.instances" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instances</sys:String>
+    <sys:String x:Key="Nav.instances.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Manage Minecraft versions and modpack instances.</sys:String>
+    <sys:String x:Key="Nav.mods" xmlns:sys="clr-namespace:System;assembly=mscorlib">Catalog</sys:String>
+    <sys:String x:Key="Nav.mods.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Browse modpack catalogs.</sys:String>
+    <sys:String x:Key="Nav.news" xmlns:sys="clr-namespace:System;assembly=mscorlib">News</sys:String>
+    <sys:String x:Key="Nav.news.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher news and releases.</sys:String>
+    <sys:String x:Key="Nav.settings" xmlns:sys="clr-namespace:System;assembly=mscorlib">Settings</sys:String>
+    <sys:String x:Key="Nav.settings.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher preferences and updates.</sys:String>
+    <sys:String x:Key="Nav.design-system" xmlns:sys="clr-namespace:System;assembly=mscorlib">UI showcase</sys:String>
+    <sys:String x:Key="Nav.design-system.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Theme and animation components (Debug only).</sys:String>
+    <sys:String x:Key="Shell.Restore" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore</sys:String>
+    <sys:String x:Key="Shell.Maximize" xmlns:sys="clr-namespace:System;assembly=mscorlib">Maximize</sys:String>
+    <sys:String x:Key="Shell.RestoreWindow" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore window</sys:String>
+    <sys:String x:Key="Shell.MaximizeWindow" xmlns:sys="clr-namespace:System;assembly=mscorlib">Maximize window</sys:String>
+    <sys:String x:Key="Shell.Section" xmlns:sys="clr-namespace:System;assembly=mscorlib">Section</sys:String>
+    <sys:String x:Key="Shell.Running" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher is running</sys:String>
+    <sys:String x:Key="Shell.GameAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">Game account</sys:String>
+    <sys:String x:Key="Shell.OpenAccountMenu" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open account menu</sys:String>
+    <sys:String x:Key="Shell.AddMicrosoft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add Microsoft account</sys:String>
+    <sys:String x:Key="Shell.AddOffline" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add offline account</sys:String>
+    <sys:String x:Key="Shell.SelectAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">Select account</sys:String>
+    <sys:String x:Key="Shell.RemoveAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">Remove account</sys:String>
+    <sys:String x:Key="Shell.SignOut" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign out</sys:String>
+    <sys:String x:Key="Shell.AddAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add account</sys:String>
+    <sys:String x:Key="Shell.OfflineNoLicense" xmlns:sys="clr-namespace:System;assembly=mscorlib">offline · unlicensed</sys:String>
+    <sys:String x:Key="Window.Minimize" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minimize</sys:String>
+    <sys:String x:Key="Window.Maximize" xmlns:sys="clr-namespace:System;assembly=mscorlib">Maximize</sys:String>
+    <sys:String x:Key="Window.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Close</sys:String>
+    <sys:String x:Key="Window.Navigate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open section</sys:String>
+    <sys:String x:Key="Settings.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Settings</sys:String>
+    <sys:String x:Key="Settings.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Appearance, app version, and updates.</sys:String>
+    <sys:String x:Key="Settings.Launch" xmlns:sys="clr-namespace:System;assembly=mscorlib">Default launch settings</sys:String>
+    <sys:String x:Key="Settings.LaunchDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Used when quickly creating a profile from Home. Per-instance settings take priority.</sys:String>
+    <sys:String x:Key="Settings.Memory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory</sys:String>
+    <sys:String x:Key="Settings.MemoryAutomation" xmlns:sys="clr-namespace:System;assembly=mscorlib">Allocated memory in megabytes</sys:String>
+    <sys:String x:Key="Settings.JavaPath" xmlns:sys="clr-namespace:System;assembly=mscorlib">Shared Java path (blank means automatic)</sys:String>
+    <sys:String x:Key="Settings.Browse" xmlns:sys="clr-namespace:System;assembly=mscorlib">Browse…</sys:String>
+    <sys:String x:Key="Settings.TestJava" xmlns:sys="clr-namespace:System;assembly=mscorlib">Check Java</sys:String>
+    <sys:String x:Key="Settings.SaveLaunch" xmlns:sys="clr-namespace:System;assembly=mscorlib">Save launch settings</sys:String>
+    <sys:String x:Key="Settings.Appearance" xmlns:sys="clr-namespace:System;assembly=mscorlib">Window appearance</sys:String>
+    <sys:String x:Key="Settings.BackdropDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Windows 11 backdrop or a solid background on supported systems.</sys:String>
+    <sys:String x:Key="Settings.TextScale" xmlns:sys="clr-namespace:System;assembly=mscorlib">Text scale</sys:String>
+    <sys:String x:Key="Settings.ReducedMotion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reduce animations</sys:String>
+    <sys:String x:Key="Settings.Snapshots" xmlns:sys="clr-namespace:System;assembly=mscorlib">Show Minecraft snapshots</sys:String>
+    <sys:String x:Key="Settings.Legacy" xmlns:sys="clr-namespace:System;assembly=mscorlib">Show legacy alpha/beta versions</sys:String>
+    <sys:String x:Key="Settings.Language" xmlns:sys="clr-namespace:System;assembly=mscorlib">Interface and catalog language</sys:String>
+    <sys:String x:Key="Settings.TranslationTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modpack description translation</sys:String>
+    <sys:String x:Key="Settings.TranslationDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Russian descriptions are translated through SubReel Platform. The DeepL API key stays on the server. Sign in to SubReel to translate; repeated translations use the local cache.</sys:String>
+    <sys:String x:Key="Settings.Platform" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel Platform connection</sys:String>
+    <sys:String x:Key="Settings.PlatformDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checks API availability and whether its features are configured. It does not block Minecraft launch.</sys:String>
+    <sys:String x:Key="Settings.CheckConnection" xmlns:sys="clr-namespace:System;assembly=mscorlib">Check connection</sys:String>
+    <sys:String x:Key="Settings.Diagnostics" xmlns:sys="clr-namespace:System;assembly=mscorlib">Diagnostics</sys:String>
+    <sys:String x:Key="Settings.DiagnosticsDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creates a ZIP with launcher logs and Windows/.NET versions. Settings, accounts, game files, and email are excluded; sensitive log values are filtered.</sys:String>
+    <sys:String x:Key="Settings.CreateArchive" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create diagnostics archive</sys:String>
+    <sys:String x:Key="Settings.OpenLogs" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open logs folder</sys:String>
+    <sys:String x:Key="Settings.Updates" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher updates</sys:String>
+    <sys:String x:Key="Settings.CurrentVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Current version</sys:String>
+    <sys:String x:Key="Settings.CheckUpdates" xmlns:sys="clr-namespace:System;assembly=mscorlib">Check for updates</sys:String>
+    <sys:String x:Key="Settings.DownloadRestart" xmlns:sys="clr-namespace:System;assembly=mscorlib">Download and restart</sys:String>
+    <sys:String x:Key="Settings.RamLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Default RAM: {0:0} MB</sys:String>
+    <sys:String x:Key="Settings.CatalogRussian" xmlns:sys="clr-namespace:System;assembly=mscorlib">Catalog descriptions will be translated into Russian.</sys:String>
+    <sys:String x:Key="Settings.CatalogEnglish" xmlns:sys="clr-namespace:System;assembly=mscorlib">The catalog's original English text will be shown.</sys:String>
+    <sys:String x:Key="Home.Eyebrow" xmlns:sys="clr-namespace:System;assembly=mscorlib">YOUR NEXT STORY</sys:String>
+    <sys:String x:Key="Home.ChooseVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a version</sys:String>
+    <sys:String x:Key="Home.ReleaseDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Releases and snapshots from the official Minecraft manifest.</sys:String>
+    <sys:String x:Key="Home.FamilyHelp" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a Minecraft version family</sys:String>
+    <sys:String x:Key="Home.RefreshManifest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Refresh manifest</sys:String>
+    <sys:String x:Key="Home.Back" xmlns:sys="clr-namespace:System;assembly=mscorlib">← Back</sys:String>
+    <sys:String x:Key="Home.MinecraftVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">MINECRAFT VERSION</sys:String>
+    <sys:String x:Key="Home.ExactVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Exact version</sys:String>
+    <sys:String x:Key="Home.Instance" xmlns:sys="clr-namespace:System;assembly=mscorlib">INSTANCE</sys:String>
+    <sys:String x:Key="Home.InstanceHelp" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a saved instance. If none is selected, the launcher will find or create one for this version.</sys:String>
+    <sys:String x:Key="Home.Launch" xmlns:sys="clr-namespace:System;assembly=mscorlib">LAUNCH</sys:String>
+    <sys:String x:Key="Home.ChooseLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a loader</sys:String>
+    <sys:String x:Key="Home.LaunchMinecraft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launch Minecraft</sys:String>
+    <sys:String x:Key="Home.Play" xmlns:sys="clr-namespace:System;assembly=mscorlib">Play</sys:String>
+    <sys:String x:Key="Home.Preparing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing…</sys:String>
+    <sys:String x:Key="Home.Cancel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel launch</sys:String>
+    <sys:String x:Key="Memory.Min" xmlns:sys="clr-namespace:System;assembly=mscorlib">512 MB</sys:String>
+    <sys:String x:Key="Memory.Max" xmlns:sys="clr-namespace:System;assembly=mscorlib">32 GB</sys:String>
+    <sys:String x:Key="Memory.Tooltip" xmlns:sys="clr-namespace:System;assembly=mscorlib">From 512 MB to 32 GB; 512 MB steps</sys:String>
+    <sys:String x:Key="Memory.Mb" xmlns:sys="clr-namespace:System;assembly=mscorlib">MB</sys:String>
+    <sys:String x:Key="News.Refresh" xmlns:sys="clr-namespace:System;assembly=mscorlib">Refresh news</sys:String>
+    <sys:String x:Key="News.Eyebrow" xmlns:sys="clr-namespace:System;assembly=mscorlib">SUBREEL FEED</sys:String>
+    <sys:String x:Key="News.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">News and updates</sys:String>
+    <sys:String x:Key="News.EmptyTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">No posts yet</sys:String>
+    <sys:String x:Key="News.OpenFeatured" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open the latest news</sys:String>
+    <sys:String x:Key="News.New" xmlns:sys="clr-namespace:System;assembly=mscorlib">NEW</sys:String>
+    <sys:String x:Key="News.Latest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Latest posts</sys:String>
+    <sys:String x:Key="News.OpenArticle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open news article</sys:String>
+    <sys:String x:Key="News.Back" xmlns:sys="clr-namespace:System;assembly=mscorlib">← Back to news</sys:String>
+    <sys:String x:Key="News.Reader" xmlns:sys="clr-namespace:System;assembly=mscorlib">ARTICLE</sys:String>
+    <sys:String x:Key="News.Changes" xmlns:sys="clr-namespace:System;assembly=mscorlib">What changed</sys:String>
+    <sys:String x:Key="News.OpenGithub" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open release on GitHub</sys:String>
+    <sys:String x:Key="News.Loading" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading news…</sys:String>
+    <sys:String x:Key="News.NotConfigured" xmlns:sys="clr-namespace:System;assembly=mscorlib">News are not configured. Check Platform:ApiBaseUrl in appsettings.json.</sys:String>
+    <sys:String x:Key="News.NoUpdates" xmlns:sys="clr-namespace:System;assembly=mscorlib">There are no published updates yet.</sys:String>
+    <sys:String x:Key="News.Loaded" xmlns:sys="clr-namespace:System;assembly=mscorlib">Updates loaded: {0}</sys:String>
+    <sys:String x:Key="News.NetworkError" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not reach SubReel Platform. Check your internet connection and site availability.</sys:String>
+    <sys:String x:Key="News.InvalidData" xmlns:sys="clr-namespace:System;assembly=mscorlib">The site returned invalid news data. Try refreshing later.</sys:String>
+    <sys:String x:Key="News.LoadError" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load news. Try again later.</sys:String>
+    <sys:String x:Key="Instances.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Game instances</sys:String>
+    <sys:String x:Key="Instances.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create and configure separate Minecraft profiles.</sys:String>
+    <sys:String x:Key="Instances.Refresh" xmlns:sys="clr-namespace:System;assembly=mscorlib">Refresh</sys:String>
+    <sys:String x:Key="Instances.Mine" xmlns:sys="clr-namespace:System;assembly=mscorlib">My instances</sys:String>
+    <sys:String x:Key="Instances.Search" xmlns:sys="clr-namespace:System;assembly=mscorlib">Search by name, version, or loader</sys:String>
+    <sys:String x:Key="Instances.Sort" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sort instances</sys:String>
+    <sys:String x:Key="Instances.EmptyTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">No matching instances</sys:String>
+    <sys:String x:Key="Instances.SelectHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose an instance to edit its settings.</sys:String>
+    <sys:String x:Key="Instances.New" xmlns:sys="clr-namespace:System;assembly=mscorlib">New instance</sys:String>
+    <sys:String x:Key="Instances.Name" xmlns:sys="clr-namespace:System;assembly=mscorlib">Name</sys:String>
+    <sys:String x:Key="Instances.MinecraftVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft version</sys:String>
+    <sys:String x:Key="Instances.Loader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loader</sys:String>
+    <sys:String x:Key="Instances.LoaderVersionOptional" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loader version (optional)</sys:String>
+    <sys:String x:Key="Instances.Memory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory, MB</sys:String>
+    <sys:String x:Key="Instances.NewMemoryAutomation" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory for the new instance in megabytes</sys:String>
+    <sys:String x:Key="Instances.SelectedMemoryAutomation" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory for the selected instance in megabytes</sys:String>
+    <sys:String x:Key="Instances.Create" xmlns:sys="clr-namespace:System;assembly=mscorlib">＋  Create instance</sys:String>
+    <sys:String x:Key="Instances.Selected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Selected instance</sys:String>
+    <sys:String x:Key="Instances.PlayerName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Player name (offline)</sys:String>
+    <sys:String x:Key="Instances.LoaderHelp" xmlns:sys="clr-namespace:System;assembly=mscorlib">Changing the game version or loader selects a compatible release. It will be installed on the next launch.</sys:String>
+    <sys:String x:Key="Instances.LoaderTooltip" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loader version; a recommended version is selected when the game or loader changes</sys:String>
+    <sys:String x:Key="Instances.JavaPath" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java for this instance (blank uses shared settings or automatic selection)</sys:String>
+    <sys:String x:Key="Instances.JavaTooltip" xmlns:sys="clr-namespace:System;assembly=mscorlib">Full path to java.exe or javaw.exe</sys:String>
+    <sys:String x:Key="Instances.CheckJava" xmlns:sys="clr-namespace:System;assembly=mscorlib">Check Java</sys:String>
+    <sys:String x:Key="Instances.Save" xmlns:sys="clr-namespace:System;assembly=mscorlib">Save changes</sys:String>
+    <sys:String x:Key="Instances.Delete" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete instance</sys:String>
+    <sys:String x:Key="Instances.Duplicate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Duplicate as clean instance</sys:String>
+    <sys:String x:Key="Instances.OpenFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open game folder</sys:String>
+    <sys:String x:Key="Instances.Export" xmlns:sys="clr-namespace:System;assembly=mscorlib">Export manifest</sys:String>
+    <sys:String x:Key="Instances.Import" xmlns:sys="clr-namespace:System;assembly=mscorlib">Import modpack manifest</sys:String>
+    <sys:String x:Key="Instances.Launch" xmlns:sys="clr-namespace:System;assembly=mscorlib">▶  Launch game</sys:String>
+    <sys:String x:Key="Instances.Cancel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel launch</sys:String>
+    <sys:String x:Key="Instances.NoSearchResults" xmlns:sys="clr-namespace:System;assembly=mscorlib">No results found. Try another name, version, or loader.</sys:String>
+    <sys:String x:Key="Instances.NoInstances" xmlns:sys="clr-namespace:System;assembly=mscorlib">There are no instances yet. Create your first one on the right.</sys:String>
+    <sys:String x:Key="Instances.SortName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Name</sys:String>
+    <sys:String x:Key="Instances.SortRecent" xmlns:sys="clr-namespace:System;assembly=mscorlib">Last played</sys:String>
+    <sys:String x:Key="Instances.SortFavorite" xmlns:sys="clr-namespace:System;assembly=mscorlib">Favorites first</sys:String>
+    <sys:String x:Key="Instances.ListName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Game instances list</sys:String>
+    <sys:String x:Key="Instances.Status.Ready" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ready</sys:String>
+    <sys:String x:Key="Instances.Status.Loading" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading instances…</sys:String>
+    <sys:String x:Key="Instances.Status.Creating" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating instance…</sys:String>
+    <sys:String x:Key="Instances.Status.Duplicating" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating clean copy…</sys:String>
+    <sys:String x:Key="Instances.Status.PreparingGame" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing Minecraft…</sys:String>
+    <sys:String x:Key="Instances.Status.LaunchCancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launch cancelled.</sys:String>
+    <sys:String x:Key="Instances.Status.ReadingManifest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reading modpack manifest…</sys:String>
+    <sys:String x:Key="Instances.Status.CheckingProvider" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking version availability with provider…</sys:String>
+    <sys:String x:Key="Instances.Status.InvalidMemory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enter memory in MB, for example 4096.</sys:String>
+    <sys:String x:Key="Instances.Status.JavaAuto" xmlns:sys="clr-namespace:System;assembly=mscorlib">No Java path is set. Set java.exe/javaw.exe for this instance or in shared settings; otherwise Java is selected automatically at launch.</sys:String>
+    <sys:String x:Key="Instances.Status.FolderNotCreated" xmlns:sys="clr-namespace:System;assembly=mscorlib">The game folder will be created when you launch this instance for the first time.</sys:String>
+    <sys:String x:Key="Instances.Status.Count" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instances: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.JavaFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java check failed: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.CheckingLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking {0} for Minecraft {1}…</sys:String>
+    <sys:String x:Key="Instances.Status.JavaRequirementUnknown" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java {0} ({1}) is running. Could not determine the Java requirement for Minecraft {2}.</sys:String>
+    <sys:String x:Key="Instances.Status.JavaTooOld" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java {0} is too old for Minecraft {1}; Java {2} or newer is required.</sys:String>
+    <sys:String x:Key="Instances.Status.JavaVerified" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java {0} ({1}) is running and meets the Java {2} minimum for Minecraft {3}.</sys:String>
+    <sys:String x:Key="Instances.Status.DownloadingModpackArchive" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloading the Modrinth archive…</sys:String>
+    <sys:String x:Key="Instances.Status.DownloadedFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Files downloaded: {0}/{1}</sys:String>
+    <sys:String x:Key="Instances.Status.ExtractingFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Extracting files: {0}/{1}</sys:String>
+    <sys:String x:Key="Instances.Status.ModpackInstalled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modpack installed. Minecraft files will be prepared on first launch.</sys:String>
+    <sys:String x:Key="Instances.Status.QuiltUpdated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Quilt {0} was updated. Continuing launch…</sys:String>
+    <sys:String x:Key="Instances.Status.PreparingVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing Minecraft {0}…</sys:String>
+    <sys:String x:Key="Instances.Status.DownloadingFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloading Minecraft files…</sys:String>
+    <sys:String x:Key="Instances.Status.InstallingLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installing loader: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.StartingGame" xmlns:sys="clr-namespace:System;assembly=mscorlib">Starting Minecraft…</sys:String>
+    <sys:String x:Key="Instances.Status.GameRunning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft is running.</sys:String>
+    <sys:String x:Key="Instances.Status.LoadFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load instances: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.CreateFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not create instance: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.SaveFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not save changes: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.FavoriteFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not change favorite: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.DeleteFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not delete instance: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.DuplicateFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not duplicate instance: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.OpenFolderFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not open game folder: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.ExportFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not export manifest: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.ImportFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not import manifest: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.LaunchFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not launch game: {0}</sys:String>
+    <sys:String x:Key="Instances.Status.InstanceSaved" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance “{0}” saved.</sys:String>
+    <sys:String x:Key="Instances.Status.FolderOpened" xmlns:sys="clr-namespace:System;assembly=mscorlib">Opened folder “{0}”.</sys:String>
+    <sys:String x:Key="Instances.Status.DeletedWithFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance “{0}” and its files were deleted.</sys:String>
+    <sys:String x:Key="Instances.Status.DeletedRecord" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance “{0}” was deleted; game files were kept.</sys:String>
+    <sys:String x:Key="Instances.Status.Duplicated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Clean copy “{0}” created. Game files will be downloaded on first launch.</sys:String>
+    <sys:String x:Key="Instances.Status.Favorited" xmlns:sys="clr-namespace:System;assembly=mscorlib">Added to favorites.</sys:String>
+    <sys:String x:Key="Instances.Status.Unfavorited" xmlns:sys="clr-namespace:System;assembly=mscorlib">Removed from favorites.</sys:String>
+    <sys:String x:Key="Instances.Status.GameStarted" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft {0} started.</sys:String>
+    <sys:String x:Key="Mods.Eyebrow" xmlns:sys="clr-namespace:System;assembly=mscorlib">MODPACK CATALOG</sys:String>
+    <sys:String x:Key="Mods.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Find your next modpack</sys:String>
+    <sys:String x:Key="Mods.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a modpack and version. The launcher installs it in a separate game profile.</sys:String>
+    <sys:String x:Key="Mods.Search" xmlns:sys="clr-namespace:System;assembly=mscorlib">Search modpacks</sys:String>
+    <sys:String x:Key="Mods.VersionSearch" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft version, for example 1.21.1</sys:String>
+    <sys:String x:Key="Mods.MinecraftVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft version</sys:String>
+    <sys:String x:Key="Mods.ModrinthCatalog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modrinth catalog</sys:String>
+    <sys:String x:Key="Mods.CreateCustom" xmlns:sys="clr-namespace:System;assembly=mscorlib">＋ Create custom instance</sys:String>
+    <sys:String x:Key="Mods.StudiosSoon" xmlns:sys="clr-namespace:System;assembly=mscorlib">By studios · soon</sys:String>
+    <sys:String x:Key="Mods.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Close</sys:String>
+    <sys:String x:Key="Mods.WizardTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Custom instance setup</sys:String>
+    <sys:String x:Key="Mods.WizardStep" xmlns:sys="clr-namespace:System;assembly=mscorlib">Step {0} of 4</sys:String>
+    <sys:String x:Key="Mods.WizardChooseVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">1. Choose Minecraft version</sys:String>
+    <sys:String x:Key="Mods.LoadingVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading versions…</sys:String>
+    <sys:String x:Key="Mods.WizardChooseLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">2. Choose a loader</sys:String>
+    <sys:String x:Key="Mods.LoadingLoaders" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking compatible loaders…</sys:String>
+    <sys:String x:Key="Mods.WizardProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">3. Configure profile</sys:String>
+    <sys:String x:Key="Mods.Name" xmlns:sys="clr-namespace:System;assembly=mscorlib">Name</sys:String>
+    <sys:String x:Key="Mods.Memory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory, MB</sys:String>
+    <sys:String x:Key="Mods.MemoryAutomation" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory for the new instance in megabytes</sys:String>
+    <sys:String x:Key="Mods.BackToCatalog" xmlns:sys="clr-namespace:System;assembly=mscorlib">← Catalog</sys:String>
+    <sys:String x:Key="Mods.AuthorLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Author: {0}</sys:String>
+    <sys:String x:Key="Mods.DownloadsLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">{0} downloads</sys:String>
+    <sys:String x:Key="Mods.WizardReview" xmlns:sys="clr-namespace:System;assembly=mscorlib">4. Review settings</sys:String>
+    <sys:String x:Key="Mods.SummaryMinecraft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft {0}</sys:String>
+    <sys:String x:Key="Mods.SummaryLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loader: {0}</sys:String>
+    <sys:String x:Key="Mods.SummaryMemory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory: {0} MB</sys:String>
+    <sys:String x:Key="Mods.Back" xmlns:sys="clr-namespace:System;assembly=mscorlib">Back</sys:String>
+    <sys:String x:Key="Mods.Next" xmlns:sys="clr-namespace:System;assembly=mscorlib">Next</sys:String>
+    <sys:String x:Key="Mods.CreateInstance" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create instance</sys:String>
+    <sys:String x:Key="Mods.AboutProject" xmlns:sys="clr-namespace:System;assembly=mscorlib">About project</sys:String>
+    <sys:String x:Key="Mods.OpenSourcePage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open source page</sys:String>
+    <sys:String x:Key="Mods.ProjectVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modpack versions</sys:String>
+    <sys:String x:Key="Mods.OpenSource" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open source</sys:String>
+    <sys:String x:Key="Mods.Open" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open</sys:String>
+    <sys:String x:Key="Mods.NoProjects" xmlns:sys="clr-namespace:System;assembly=mscorlib">No modpacks found</sys:String>
+    <sys:String x:Key="Mods.NoProjectsHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Change your query or filters and try again.</sys:String>
+    <sys:String x:Key="Mods.CancelInstall" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel installation</sys:String>
+    <sys:String x:Key="Mods.ShowMore" xmlns:sys="clr-namespace:System;assembly=mscorlib">Show more</sys:String>
+    <sys:String x:Key="Mods.Status.SearchHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Search Modrinth modpacks by name or filters.</sys:String>
+    <sys:String x:Key="Mods.Status.LoadingVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading Minecraft versions…</sys:String>
+    <sys:String x:Key="Mods.Status.ChooseVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a Minecraft version.</sys:String>
+    <sys:String x:Key="Mods.Status.ChooseLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose an available loader.</sys:String>
+    <sys:String x:Key="Mods.Status.EnterName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enter an instance name.</sys:String>
+    <sys:String x:Key="Mods.Status.InvalidMemoryRange" xmlns:sys="clr-namespace:System;assembly=mscorlib">Memory must be a number from 512 to 65536 MB.</sys:String>
+    <sys:String x:Key="Mods.Status.LoaderUnavailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">The selected loader is not available for this version.</sys:String>
+    <sys:String x:Key="Mods.Status.EnterMemory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enter a memory amount in MB.</sys:String>
+    <sys:String x:Key="Mods.Status.CreatingProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating game profile…</sys:String>
+    <sys:String x:Key="Mods.Status.Searching" xmlns:sys="clr-namespace:System;assembly=mscorlib">Searching modpacks…</sys:String>
+    <sys:String x:Key="Mods.Status.InstallCancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modpack installation cancelled.</sys:String>
+    <sys:String x:Key="Mods.Status.DownloadingArchive" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloading modpack archive…</sys:String>
+    <sys:String x:Key="Mods.Status.DownloadedFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloaded files: {0}/{1}</sys:String>
+    <sys:String x:Key="Mods.Status.ExtractingFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Extracting files: {0}/{1}</sys:String>
+    <sys:String x:Key="Mods.Status.ArchiveInstalled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modpack installed. Minecraft files will be prepared on first launch.</sys:String>
+    <sys:String x:Key="Mods.Status.LoadingProjectVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading modpack versions…</sys:String>
+    <sys:String x:Key="Mods.Status.ReadingManifest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reading modpack manifest…</sys:String>
+    <sys:String x:Key="Auth.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Account · SubReel</sys:String>
+    <sys:String x:Key="Auth.Eyebrow" xmlns:sys="clr-namespace:System;assembly=mscorlib">SUBREEL  /  ACCOUNT CENTER</sys:String>
+    <sys:String x:Key="Auth.Heading" xmlns:sys="clr-namespace:System;assembly=mscorlib">Account and security</sys:String>
+    <sys:String x:Key="Auth.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Manage your SubReel and Minecraft profiles separately. Linking does not send game tokens.</sys:String>
+    <sys:String x:Key="Auth.TwoAccounts" xmlns:sys="clr-namespace:System;assembly=mscorlib">Two independent accounts</sys:String>
+    <sys:String x:Key="Auth.TwoAccountsDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel manages your platform profile; Microsoft verifies your license and launches Minecraft Java.</sys:String>
+    <sys:String x:Key="Auth.Refresh" xmlns:sys="clr-namespace:System;assembly=mscorlib">Refresh</sys:String>
+    <sys:String x:Key="Auth.SubReelTab" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel profile</sys:String>
+    <sys:String x:Key="Auth.SubReelAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel account</sys:String>
+    <sys:String x:Key="Auth.SubReelDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Platform sign-in, registration, and session</sys:String>
+    <sys:String x:Key="Auth.Email" xmlns:sys="clr-namespace:System;assembly=mscorlib">EMAIL</sys:String>
+    <sys:String x:Key="Auth.Password" xmlns:sys="clr-namespace:System;assembly=mscorlib">PASSWORD</sys:String>
+    <sys:String x:Key="Auth.EmailHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Use a valid email to register. If email confirmation is enabled in Supabase, confirm it from your inbox before signing in.</sys:String>
+    <sys:String x:Key="Auth.SignIn" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign in</sys:String>
+    <sys:String x:Key="Auth.SignUp" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create account</sys:String>
+    <sys:String x:Key="Auth.SignOut" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign out</sys:String>
+    <sys:String x:Key="Auth.SignInWebsite" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign in with SubReel website</sys:String>
+    <sys:String x:Key="Auth.AccountStatus" xmlns:sys="clr-namespace:System;assembly=mscorlib">ACCOUNT STATUS</sys:String>
+    <sys:String x:Key="Auth.AccountStatusHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign in to link your game profile.</sys:String>
+    <sys:String x:Key="Auth.GameProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">Game profile</sys:String>
+    <sys:String x:Key="Auth.GameProfileDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Used to launch and verify Minecraft Java Edition</sys:String>
+    <sys:String x:Key="Auth.ChooseGameAccount" xmlns:sys="clr-namespace:System;assembly=mscorlib">CHOOSE GAME ACCOUNT</sys:String>
+    <sys:String x:Key="Auth.SignInMicrosoft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign in with Microsoft</sys:String>
+    <sys:String x:Key="Auth.CheckLicense" xmlns:sys="clr-namespace:System;assembly=mscorlib">Check license</sys:String>
+    <sys:String x:Key="Auth.BuyMinecraft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Buy Minecraft Java</sys:String>
+    <sys:String x:Key="Auth.AddOffline" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add offline account</sys:String>
+    <sys:String x:Key="Auth.MinecraftLicense" xmlns:sys="clr-namespace:System;assembly=mscorlib">MINECRAFT JAVA LICENSE</sys:String>
+    <sys:String x:Key="Auth.NotChecked" xmlns:sys="clr-namespace:System;assembly=mscorlib">Not checked yet</sys:String>
+    <sys:String x:Key="Auth.CheckLicenseHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign in with Microsoft and check access to Minecraft Services.</sys:String>
+    <sys:String x:Key="Auth.ProfileLink" xmlns:sys="clr-namespace:System;assembly=mscorlib">GAME PROFILE AND LINKING</sys:String>
+    <sys:String x:Key="Auth.NoGameProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">No game profile selected.</sys:String>
+    <sys:String x:Key="Auth.LinkProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">Link profile</sys:String>
+    <sys:String x:Key="Auth.UnlinkProfile" xmlns:sys="clr-namespace:System;assembly=mscorlib">Unlink profile</sys:String>
+    <sys:String x:Key="Auth.LinkExplanation" xmlns:sys="clr-namespace:System;assembly=mscorlib">Only a verified Microsoft profile can be linked. An offline account does not verify a license. Supabase stores only the UUID and name; game tokens are never sent.</sys:String>
+    <sys:String x:Key="Auth.Ready" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ready.</sys:String>
+    <sys:String x:Key="Auth.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Close</sys:String>
+    <sys:String x:Key="Auth.State.Checking" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking license…</sys:String>
+    <sys:String x:Key="Auth.State.CheckingDetails" xmlns:sys="clr-namespace:System;assembly=mscorlib">Contacting Minecraft Services. This may take a few seconds.</sys:String>
+    <sys:String x:Key="Auth.State.Verified" xmlns:sys="clr-namespace:System;assembly=mscorlib">License verified</sys:String>
+    <sys:String x:Key="Auth.State.VerifiedDetails" xmlns:sys="clr-namespace:System;assembly=mscorlib">Access to the Minecraft Java Edition profile is verified.</sys:String>
+    <sys:String x:Key="Auth.State.NotFound" xmlns:sys="clr-namespace:System;assembly=mscorlib">License not found</sys:String>
+    <sys:String x:Key="Auth.State.NotFoundDetails" xmlns:sys="clr-namespace:System;assembly=mscorlib">No Java Edition profile was found on this account.</sys:String>
+    <sys:String x:Key="Auth.State.Offline" xmlns:sys="clr-namespace:System;assembly=mscorlib">Offline profile</sys:String>
+    <sys:String x:Key="Auth.State.OfflineDetails" xmlns:sys="clr-namespace:System;assembly=mscorlib">Offline mode does not verify a Minecraft Java Edition license.</sys:String>
+    <sys:String x:Key="Auth.State.Expired" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign in again</sys:String>
+    <sys:String x:Key="Auth.State.ExpiredDetails" xmlns:sys="clr-namespace:System;assembly=mscorlib">The Microsoft session is not verified.</sys:String>
+    <sys:String x:Key="Auth.State.Connection" xmlns:sys="clr-namespace:System;assembly=mscorlib">Service connection unavailable</sys:String>
+    <sys:String x:Key="Auth.State.ConnectionDetails" xmlns:sys="clr-namespace:System;assembly=mscorlib">A network issue does not mean that the license is missing.</sys:String>
+    <sys:String x:Key="Auth.State.Error" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not verify</sys:String>
+    <sys:String x:Key="Auth.State.ErrorDetails" xmlns:sys="clr-namespace:System;assembly=mscorlib">The verification result is unknown.</sys:String>
+    <sys:String x:Key="Auth.State.NotChecked" xmlns:sys="clr-namespace:System;assembly=mscorlib">Not checked yet</sys:String>
+    <sys:String x:Key="Auth.State.CheckingMicrosoft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Signing in to Microsoft and checking the Minecraft Java profile.</sys:String>
+    <sys:String x:Key="Auth.State.ProfileVerified" xmlns:sys="clr-namespace:System;assembly=mscorlib">Profile {0} verified through Minecraft Services.</sys:String>
+    <sys:String x:Key="Auth.State.NotFoundPurchase" xmlns:sys="clr-namespace:System;assembly=mscorlib">No Java Edition profile was found on this Microsoft account. Check that the purchase belongs to this account.</sys:String>
+    <sys:String x:Key="Auth.State.ConnectionRetry" xmlns:sys="clr-namespace:System;assembly=mscorlib">A network issue does not mean that the license is missing. Check your connection and try again.</sys:String>
+    <sys:String x:Key="Auth.State.TryAgain" xmlns:sys="clr-namespace:System;assembly=mscorlib">Verification did not finish. Resolve the issue and try again.</sys:String>
+    <sys:String x:Key="Auth.State.SessionRetry" xmlns:sys="clr-namespace:System;assembly=mscorlib">The session is not verified. Sign in with Microsoft again and retry.</sys:String>
+    <sys:String x:Key="Auth.State.ServicesUnavailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not reach Minecraft Services. This does not mean the license is missing.</sys:String>
+    <sys:String x:Key="Auth.PlatformConnected" xmlns:sys="clr-namespace:System;assembly=mscorlib">SUBREEL ACCOUNT CONNECTED</sys:String>
+    <sys:String x:Key="Auth.PlatformSession" xmlns:sys="clr-namespace:System;assembly=mscorlib">Signed in
+{0}
+Session active. Minecraft game account is managed separately.</sys:String>
+    <sys:String x:Key="Startup.Preparing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing launcher</sys:String>
+    <sys:String x:Key="Startup.CheckTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Startup checks</sys:String>
+    <sys:String x:Key="Startup.Files" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launcher files</sys:String>
+    <sys:String x:Key="Startup.Pending" xmlns:sys="clr-namespace:System;assembly=mscorlib">Waiting for check</sys:String>
+    <sys:String x:Key="Startup.Minecraft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft Java Edition</sys:String>
+    <sys:String x:Key="Startup.SubReel" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel account</sys:String>
+    <sys:String x:Key="Startup.Login" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sign in or refresh SubReel session</sys:String>
+    <sys:String x:Key="Startup.SetupTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Set up the launcher</sys:String>
+    <sys:String x:Key="Startup.SetupDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">You can change these settings later.</sys:String>
+    <sys:String x:Key="Startup.Language" xmlns:sys="clr-namespace:System;assembly=mscorlib">Language</sys:String>
+    <sys:String x:Key="Startup.DefaultMemory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Default game memory</sys:String>
+    <sys:String x:Key="Startup.ReduceMotion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reduce animations</sys:String>
+    <sys:String x:Key="Startup.LicenseHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">A license is required to play through Microsoft. Offline profiles can be used without license verification.</sys:String>
+    <sys:String x:Key="Startup.Continue" xmlns:sys="clr-namespace:System;assembly=mscorlib">Continue</sys:String>
+    <sys:String x:Key="Startup.Skip" xmlns:sys="clr-namespace:System;assembly=mscorlib">Skip setup</sys:String>
+    <sys:String x:Key="Startup.Ram2" xmlns:sys="clr-namespace:System;assembly=mscorlib">2 GB</sys:String>
+    <sys:String x:Key="Startup.Ram4" xmlns:sys="clr-namespace:System;assembly=mscorlib">4 GB</sys:String>
+    <sys:String x:Key="Startup.Ram6" xmlns:sys="clr-namespace:System;assembly=mscorlib">6 GB</sys:String>
+    <sys:String x:Key="Startup.Ram8" xmlns:sys="clr-namespace:System;assembly=mscorlib">8 GB</sys:String>
+    <sys:String x:Key="Startup.FirstRun" xmlns:sys="clr-namespace:System;assembly=mscorlib">First launch — a few quick settings</sys:String>
+    <sys:String x:Key="Startup.SaveAndContinue" xmlns:sys="clr-namespace:System;assembly=mscorlib">Save and open launcher</sys:String>
+    <sys:String x:Key="Startup.Opening" xmlns:sys="clr-namespace:System;assembly=mscorlib">Opening launcher…</sys:String>
+    <sys:String x:Key="Startup.Check.FilesRunning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking application and local folders…</sys:String>
+    <sys:String x:Key="Startup.Check.FilesPassed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Application files are ready; data folders are available.</sys:String>
+    <sys:String x:Key="Startup.Check.LicenseRunning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking saved Minecraft profile…</sys:String>
+    <sys:String x:Key="Startup.Check.LicensePassed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Profile {0} verified through Minecraft Services.</sys:String>
+    <sys:String x:Key="Startup.Check.Offline" xmlns:sys="clr-namespace:System;assembly=mscorlib">An offline profile is active. It does not verify a Minecraft Java license.</sys:String>
+    <sys:String x:Key="Startup.Check.NoMicrosoft" xmlns:sys="clr-namespace:System;assembly=mscorlib">No Microsoft profile is connected. You can check the license after signing in.</sys:String>
+    <sys:String x:Key="Startup.Check.LicenseTimeout" xmlns:sys="clr-namespace:System;assembly=mscorlib">The check took too long. Retry it from your profile.</sys:String>
+    <sys:String x:Key="Startup.Check.SubReelRunning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking SubReel session…</sys:String>
+    <sys:String x:Key="Startup.Check.SubReelPassed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Signed in{0}</sys:String>
+    <sys:String x:Key="Startup.Check.SubReelTimeout" xmlns:sys="clr-namespace:System;assembly=mscorlib">The check took too long. Check your connection.</sys:String>
+    <sys:String x:Key="Startup.Check.FilesFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">The check found a problem: {0}</sys:String>
+    <sys:String x:Key="Startup.Check.LicenseFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not verify profile: {0}</sys:String>
+    <sys:String x:Key="Startup.Check.SubReelFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not verify session: {0}</sys:String>
+    <sys:String x:Key="Mods.Status.AvailableVersions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft versions available: {0}.</sys:String>
+    <sys:String x:Key="Mods.Status.LoadingProject" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading versions for “{0}”…</sys:String>
+    <sys:String x:Key="Mods.Status.VersionsFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load versions: {0}</sys:String>
+    <sys:String x:Key="Mods.Status.CreateFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not create instance: {0}</sys:String>
+    <sys:String x:Key="Mods.Status.LoadersFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load loaders: {0}</sys:String>
+    <sys:String x:Key="Mods.Status.CatalogFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load catalog: {0}</sys:String>
+    <sys:String x:Key="Mods.Status.ProjectVersionsFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load modpack versions: {0}</sys:String>
+    <sys:String x:Key="Mods.Status.InstallFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not install modpack: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.NotStarted" xmlns:sys="clr-namespace:System;assembly=mscorlib">The check has not run yet.</sys:String>
+    <sys:String x:Key="Settings.Status.PlatformNotStarted" xmlns:sys="clr-namespace:System;assembly=mscorlib">Platform check has not run yet.</sys:String>
+    <sys:String x:Key="Settings.Status.DiagnosticInfo" xmlns:sys="clr-namespace:System;assembly=mscorlib">The archive contains only launcher logs after filtering secrets and email addresses.</sys:String>
+    <sys:String x:Key="Settings.Status.JavaAutoInfo" xmlns:sys="clr-namespace:System;assembly=mscorlib">An empty Java path selects a runtime automatically.</sys:String>
+    <sys:String x:Key="Settings.Status.CreatingArchive" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating diagnostics archive…</sys:String>
+    <sys:String x:Key="Settings.Status.ArchiveCreated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Archive created: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.ArchiveFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not create archive. Check access to the launcher logs folder.</sys:String>
+    <sys:String x:Key="Settings.Status.LogsOpened" xmlns:sys="clr-namespace:System;assembly=mscorlib">Opened logs and diagnostics archive folder.</sys:String>
+    <sys:String x:Key="Settings.Status.LogsFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not open the launcher logs folder.</sys:String>
+    <sys:String x:Key="Settings.Status.CheckingPlatform" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking Platform availability…</sys:String>
+    <sys:String x:Key="Settings.Status.PlatformFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not check SubReel Platform. Check the API address and try again later.</sys:String>
+    <sys:String x:Key="Settings.Status.InvalidMemory" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose between 512 MB and 32 GB of memory.</sys:String>
+    <sys:String x:Key="Settings.Status.JavaNotFound" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java file not found. Set the path to java.exe/javaw.exe or leave it empty for automatic detection.</sys:String>
+    <sys:String x:Key="Settings.Status.LaunchSaveFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not save launch settings.</sys:String>
+    <sys:String x:Key="Settings.Status.UpToDate" xmlns:sys="clr-namespace:System;assembly=mscorlib">You have the latest version.</sys:String>
+    <sys:String x:Key="Settings.JavaDialogTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose Java runtime</sys:String>
+    <sys:String x:Key="Settings.JavaDialogFilter" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java runtime (java.exe; javaw.exe)|java.exe;javaw.exe|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="Settings.Status.CheckingUpdates" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking for updates…</sys:String>
+    <sys:String x:Key="Settings.Status.UpdateCheckFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not check for updates: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.SaveFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not save settings: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.UpdateFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not install update: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.JavaCheckFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java check failed: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.DownloadingUpdate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloading update {0}…</sys:String>
+    <sys:String x:Key="Settings.Status.UpdateAvailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">Version {0} is available.</sys:String>
+    <sys:String x:Key="Settings.Status.DownloadProgress" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloading update: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.JavaPathEmpty" xmlns:sys="clr-namespace:System;assembly=mscorlib">No path is set. The launcher will select Java automatically. To inspect a runtime manually, enter the path to java.exe or javaw.exe.</sys:String>
+    <sys:String x:Key="Settings.Status.LaunchSavedAuto" xmlns:sys="clr-namespace:System;assembly=mscorlib">Saved. Java will be selected automatically; default RAM applies to new instances created from Home.</sys:String>
+    <sys:String x:Key="Settings.Status.LaunchSavedJava" xmlns:sys="clr-namespace:System;assembly=mscorlib">Saved. The shared Java runtime applies to instances without their own Java path.</sys:String>
+    <sys:String x:Key="Settings.Status.JavaVerified" xmlns:sys="clr-namespace:System;assembly=mscorlib">Java {0} ({1}) runs. Select Save to use it as the shared runtime for instances without their own path.</sys:String>
+    <sys:String x:Key="Settings.Status.PlatformHttpFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel Platform check failed: HTTP {0}. The health endpoint may not be deployed yet.</sys:String>
+    <sys:String x:Key="Settings.Status.Configured" xmlns:sys="clr-namespace:System;assembly=mscorlib">configured</sys:String>
+    <sys:String x:Key="Settings.Status.NotConfigured" xmlns:sys="clr-namespace:System;assembly=mscorlib">not configured</sys:String>
+    <sys:String x:Key="Settings.Status.PlatformAvailable" xmlns:sys="clr-namespace:System;assembly=mscorlib">Platform is available ({0}). News: {1}; sign-in: {2}; CurseForge: {3}; translation: {4}. Server settings are present; connectivity to each service is not checked individually.</sys:String>
+    <sys:String x:Key="Settings.Status.LanguageSaveFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not save language: {0}</sys:String>
+    <sys:String x:Key="Settings.Status.UpdateSourceMissing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Update source is not configured. Set Updates:FeedUrl after publishing releases.</sys:String>
+    <sys:String x:Key="Settings.Status.AutoUpdateReady" xmlns:sys="clr-namespace:System;assembly=mscorlib">Automatic updates are ready.</sys:String>
+    <sys:String x:Key="Settings.Status.UpdateInstallRequired" xmlns:sys="clr-namespace:System;assembly=mscorlib">Updates are available in the installed launcher version.</sys:String>
+</ResourceDictionary>

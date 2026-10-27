@@ -39,47 +39,68 @@ public sealed class DeepLModpackTextTranslator(HttpClient http, ILauncherSession
 
             if (missing.Count == 0) return result;
 
-            var accessToken = session.AccessToken;
+            var accessToken = await session.GetAccessTokenAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(accessToken))
                 throw new InvalidOperationException("Войдите в аккаунт SubReel, чтобы переводить описания каталога.");
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "translate");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            request.Content = JsonContent.Create(new { text = missing.Values.Select(value => value.Text).ToArray(), target_lang = language });
-            using var response = await http.SendAsync(request, cancellationToken);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (!response.IsSuccessStatusCode)
+            using var response = await SendTranslationAsync(accessToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                var message = "Сервис перевода SubReel временно недоступен.";
-                try
-                {
-                    using var errorDocument = JsonDocument.Parse(body);
-                    if (errorDocument.RootElement.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.String)
-                        message = error.GetString() ?? message;
-                }
-                catch (JsonException) { }
-                throw new HttpRequestException(message, null, response.StatusCode);
+                response.Dispose();
+                accessToken = await session.GetAccessTokenAsync(cancellationToken, forceRefresh: true);
+                if (string.IsNullOrWhiteSpace(accessToken))
+                    throw new HttpRequestException("Сессия SubReel истекла. Войдите в аккаунт снова.", null, System.Net.HttpStatusCode.Unauthorized);
+                using var retriedResponse = await SendTranslationAsync(accessToken);
+                await ProcessResponseAsync(retriedResponse);
+                return result;
             }
-
-            using var document = JsonDocument.Parse(body);
-            var translations = document.RootElement.GetProperty("translations").EnumerateArray().ToArray();
-            if (translations.Length != missing.Count)
-                throw new InvalidDataException("DeepL вернул неожиданное количество переводов.");
-
-            var cacheChanged = false;
-            var missingEntries = missing.ToArray();
-            for (var index = 0; index < missingEntries.Length; index++)
-            {
-                var text = translations[index].GetProperty("text").GetString() ?? missingEntries[index].Value.Text;
-                cache[missingEntries[index].Key] = text;
-                foreach (var resultIndex in missingEntries[index].Value.Indexes) result[resultIndex] = text;
-                cacheChanged = true;
-            }
-
-            if (cache.Count > MaxCacheEntries)
-                foreach (var staleKey in cache.Keys.Take(cache.Count - MaxCacheEntries).ToArray()) cache.Remove(staleKey);
-            if (cacheChanged) await SaveCacheAsync(cancellationToken);
+            await ProcessResponseAsync(response);
             return result;
+
+            async Task<HttpResponseMessage> SendTranslationAsync(string token)
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, "translate");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                request.Content = JsonContent.Create(new { text = missing.Values.Select(value => value.Text).ToArray(), target_lang = language });
+                try { return await http.SendAsync(request, cancellationToken); }
+                finally { request.Dispose(); }
+            }
+
+            async Task ProcessResponseAsync(HttpResponseMessage response)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var message = "Сервис перевода SubReel временно недоступен.";
+                    try
+                    {
+                        using var errorDocument = JsonDocument.Parse(body);
+                        if (errorDocument.RootElement.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.String)
+                            message = error.GetString() ?? message;
+                    }
+                    catch (JsonException) { }
+                    throw new HttpRequestException(message, null, response.StatusCode);
+                }
+
+                using var document = JsonDocument.Parse(body);
+                var translations = document.RootElement.GetProperty("translations").EnumerateArray().ToArray();
+                if (translations.Length != missing.Count)
+                    throw new InvalidDataException("DeepL вернул неожиданное количество переводов.");
+
+                var cacheChanged = false;
+                var missingEntries = missing.ToArray();
+                for (var index = 0; index < missingEntries.Length; index++)
+                {
+                    var text = translations[index].GetProperty("text").GetString() ?? missingEntries[index].Value.Text;
+                    cache[missingEntries[index].Key] = text;
+                    foreach (var resultIndex in missingEntries[index].Value.Indexes) result[resultIndex] = text;
+                    cacheChanged = true;
+                }
+
+                if (cache.Count > MaxCacheEntries)
+                    foreach (var staleKey in cache.Keys.Take(cache.Count - MaxCacheEntries).ToArray()) cache.Remove(staleKey);
+                if (cacheChanged) await SaveCacheAsync(cancellationToken);
+            }
         }
         finally { _cacheGate.Release(); }
     }

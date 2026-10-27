@@ -116,9 +116,20 @@ public sealed class SupabaseGameProfileService : ISupabaseGameProfileService
 
     private static Exception CreateApiException(HttpStatusCode status, string payload)
     {
-        // Do not expose request headers or bearer tokens in errors.
-        var detail = payload.Length > 500 ? payload[..500] : payload;
-        return new InvalidOperationException($"Supabase не выполнил операцию с игровым профилем (HTTP {(int)status}). {detail}");
+        // Do not expose raw PostgREST payloads in the UI or logs.
+        if (status == HttpStatusCode.NotFound && payload.Contains("launcher_game_profiles", StringComparison.OrdinalIgnoreCase))
+            return new InvalidOperationException("Таблица launcher_game_profiles ещё не создана. Примени миграцию supabase/sql/032_launcher_game_profiles.sql из subreel-platform.");
+        if ((int)status >= 500)
+            return new InvalidOperationException("Сервис SubReel временно недоступен. Попробуй позже.");
+
+        return status switch
+        {
+            HttpStatusCode.Unauthorized => new InvalidOperationException("Сессия SubReel истекла. Войди в аккаунт снова."),
+            HttpStatusCode.Forbidden => new InvalidOperationException("Supabase запретил доступ к игровому профилю. Проверь правила доступа аккаунта."),
+            HttpStatusCode.Conflict => new InvalidOperationException("Профиль Minecraft уже изменён. Обнови данные и повтори действие."),
+            HttpStatusCode.TooManyRequests => new InvalidOperationException("Слишком много запросов к SubReel. Подожди немного и повтори."),
+            _ => new InvalidOperationException($"Не удалось выполнить операцию с игровым профилем (HTTP {(int)status}).")
+        };
     }
 
     private static bool TryReadString(JsonElement element, string name, out string value)

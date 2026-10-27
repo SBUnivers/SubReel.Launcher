@@ -110,7 +110,7 @@ public interface ITranslationKeyStore
 
 public interface ILauncherSessionProvider
 {
-    string? AccessToken { get; }
+    Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default, bool forceRefresh = false);
 }
 
 public interface ICurseForgeApiClient

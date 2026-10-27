@@ -20,6 +20,7 @@ public interface ILaunchOrchestrator
 {
     event Action<LaunchStatus>? StatusChanged;
     IReadOnlyCollection<LaunchStatus> ActiveLaunches { get; }
+    bool CancelLaunch(Guid instanceId);
 
     Task<Process> LaunchAsync(
         MinecraftInstance instance,
@@ -37,9 +38,32 @@ public sealed class LaunchOrchestrator(
     ILogger<LaunchOrchestrator> logger) : ILaunchOrchestrator
 {
     private readonly ConcurrentDictionary<Guid, LaunchStatus> _active = new();
+    private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _launchCancellations = new();
 
     public event Action<LaunchStatus>? StatusChanged;
     public IReadOnlyCollection<LaunchStatus> ActiveLaunches => _active.Values.ToArray();
+
+    public bool CancelLaunch(Guid instanceId)
+    {
+        if (!_launchCancellations.TryGetValue(instanceId, out var cancellation)) return false;
+        try
+        {
+            if (cancellation.IsCancellationRequested) return false;
+            cancellation.Cancel();
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+        catch (AggregateException ex)
+        {
+            // Cancellation has already been requested. A faulty cancellation
+            // callback must not turn the Shell button into an unhandled UI error.
+            logger.LogError(ex, "A cancellation callback failed for Minecraft instance {InstanceId}", instanceId);
+            return true;
+        }
+    }
 
     public async Task<Process> LaunchAsync(
         MinecraftInstance instance,
@@ -50,15 +74,27 @@ public sealed class LaunchOrchestrator(
     {
         ArgumentNullException.ThrowIfNull(instance);
         cancellationToken.ThrowIfCancellationRequested();
+        var launchCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var launchToken = launchCancellation.Token;
         var initialStatus = new LaunchStatus(instance.Id, instance.Name, LaunchState.Preparing,
             $"Подготовка Minecraft {instance.MinecraftVersion}…", LaunchStage.Resolving);
         if (!_active.TryAdd(instance.Id, initialStatus))
+        {
+            launchCancellation.Dispose();
             throw new InvalidOperationException($"Сборка «{instance.Name}» уже запускается или запущена.");
+        }
+        if (!_launchCancellations.TryAdd(instance.Id, launchCancellation))
+        {
+            _active.TryRemove(instance.Id, out _);
+            launchCancellation.Dispose();
+            throw new InvalidOperationException($"Не удалось создать управление отменой для сборки «{instance.Name}».");
+        }
 
         Publish(initialStatus);
         try
         {
-        var launcherSettings = await settings.LoadAsync(cancellationToken);
+        var gameDirectory = instances.GetValidatedGameDirectory(instance);
+        var launcherSettings = await settings.LoadAsync(launchToken);
         progress?.Report(new LaunchProgress(LaunchStage.Resolving, $"Подготовка {instance.MinecraftVersion}…"));
 
         var installProgress = new InlineProgress<GameInstallProgress>(update =>
@@ -76,7 +112,7 @@ public sealed class LaunchOrchestrator(
         });
         var process = await gameService.LaunchAsync(
             new GameLaunchRequest(
-                instance.GameDirectory,
+                gameDirectory,
                 instance.MinecraftVersion,
                 instance.MemoryMb,
                 string.IsNullOrWhiteSpace(offlinePlayerName) ? "SubReelPlayer" : offlinePlayerName,
@@ -87,7 +123,14 @@ public sealed class LaunchOrchestrator(
                 string.IsNullOrWhiteSpace(instance.JavaPath) ? launcherSettings.JavaPath : instance.JavaPath,
                 instance.JvmArguments),
             installProgress,
-            cancellationToken);
+            launchToken);
+
+        // Once Java has been launched successfully, cancellation applies only to
+        // installation/startup and must not make the running game appear canceled.
+        _launchCancellations.TryRemove(instance.Id, out _);
+        var runningStatus = new LaunchStatus(instance.Id, instance.Name, LaunchState.Running,
+            "Minecraft запущен.", LaunchStage.Running, process.Id, StartedAt: DateTimeOffset.UtcNow);
+        Publish(runningStatus);
 
         instance.LastPlayedAt = DateTimeOffset.UtcNow;
         try
@@ -108,10 +151,7 @@ public sealed class LaunchOrchestrator(
         {
             logger.LogWarning(ex, "Minecraft instance {InstanceId} started, but LastPlayedInstanceId could not be saved", instance.Id);
         }
-        var runningStatus = new LaunchStatus(instance.Id, instance.Name, LaunchState.Running,
-            "Minecraft запущен.", LaunchStage.Running, process.Id, StartedAt: DateTimeOffset.UtcNow);
-        Publish(runningStatus);
-        _ = ObserveExitAsync(instance.Id, process, instance.GameDirectory);
+        _ = ObserveExitAsync(instance.Id, process, gameDirectory);
         progress?.Report(new LaunchProgress(LaunchStage.Running, "Minecraft запущен.", 1));
         return process;
         }
@@ -124,6 +164,11 @@ public sealed class LaunchOrchestrator(
         {
             Finish(instance.Id, initialStatus with { State = LaunchState.Failed, Message = ex.Message });
             throw;
+        }
+        finally
+        {
+            _launchCancellations.TryRemove(instance.Id, out _);
+            launchCancellation.Dispose();
         }
     }
 
@@ -148,8 +193,13 @@ public sealed class LaunchOrchestrator(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Could not observe Minecraft process exit for instance {InstanceId}", instanceId);
             if (_active.TryGetValue(instanceId, out var status))
                 Finish(instanceId, status with { State = LaunchState.Failed, Message = $"Не удалось отследить процесс: {ex.Message}" });
+        }
+        finally
+        {
+            process.Dispose();
         }
     }
 

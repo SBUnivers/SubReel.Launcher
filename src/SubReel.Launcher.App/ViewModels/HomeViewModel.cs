@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using SubReel.Launcher.Abstractions.Game;
 using SubReel.Launcher.Abstractions.Settings;
 using SubReel.Launcher.App.DesignSystem;
+using SubReel.Launcher.App.Services;
 using SubReel.Launcher.Core.Instances;
 using SubReel.Launcher.Core.Launching;
 using SubReel.Launcher.Core.Models;
@@ -23,8 +24,36 @@ public sealed record MinecraftVersionOption(string Id, bool IsSnapshot, bool IsL
     public string Label => IsSnapshot ? $"{Id}  ·  snapshot" : IsLegacy ? $"{Id}  ·  {ChannelLabel}" : Id;
 }
 
-public sealed record MinecraftReleaseFamily(string Id, string Name, string Accent, string Tagline, IReadOnlyList<MinecraftVersionOption> Versions, Uri? ArtUri = null)
+public sealed class MinecraftReleaseFamily : ObservableObject
 {
+    private readonly string _sourceName;
+    private readonly string _sourceTagline;
+    private string _name;
+    private string _tagline;
+
+    public string Id { get; }
+    public string Name { get => _name; private set => SetProperty(ref _name, value); }
+    public string Accent { get; }
+    public string Tagline { get => _tagline; private set => SetProperty(ref _tagline, value); }
+    public IReadOnlyList<MinecraftVersionOption> Versions { get; }
+    public Uri? ArtUri { get; }
+
+    public MinecraftReleaseFamily(string id, string name, string accent, string tagline, IReadOnlyList<MinecraftVersionOption> versions, Uri? artUri = null)
+    {
+        Id = id;
+        _sourceName = _name = name;
+        Accent = accent;
+        _sourceTagline = _tagline = tagline;
+        Versions = versions;
+        ArtUri = artUri;
+    }
+
+    public void ApplyLocalization(ILocalizationService localization)
+    {
+        Name = localization.Get($"Home.Family.{Id}.Title", _sourceName);
+        Tagline = localization.Get($"Home.Family.{Id}.Tagline", _sourceTagline);
+    }
+
     public string LatestVersion => Versions.FirstOrDefault(x => !x.IsSnapshot)?.Id ?? Versions.FirstOrDefault()?.Id ?? Id;
     public string LatestVersionLabel => $"Последняя версия {LatestVersion}";
 }
@@ -40,6 +69,7 @@ public partial class HomeViewModel : ObservableObject
     private readonly ISettingsService _settings;
     private readonly InstanceService _instances;
     private readonly ILogger<HomeViewModel> _logger;
+    private readonly ILocalizationService _localization;
     private bool _restoringSelection;
     private CancellationTokenSource? _launchCancellation;
 
@@ -55,16 +85,79 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty] private MinecraftInstance? _selectedInstance;
     [ObservableProperty] private string _selectedVersion = "";
     [ObservableProperty] private string _selectedLoader = "Vanilla";
-    [ObservableProperty] private string _statusText = "Загружаю официальный список версий Minecraft…";
-    [ObservableProperty] private string _versionCatalogStatus = "Загружаю версии Minecraft…";
-    [ObservableProperty] private string _loaderCatalogStatus = "Выбери версию игры, чтобы проверить загрузчики.";
+    [ObservableProperty] private string _statusTextRaw = "Загружаю официальный список версий Minecraft…";
+    [ObservableProperty] private string _versionCatalogStatusRaw = "Загружаю версии Minecraft…";
+    [ObservableProperty] private string _loaderCatalogStatusRaw = "Выбери версию игры, чтобы проверить загрузчики.";
     [ObservableProperty] private string _selectedAccent = "#8875FF";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isExpanded;
     [ObservableProperty] private double _launchProgress;
-    public string SelectedVersionSummary => string.IsNullOrEmpty(SelectedVersion) ? "Выбери версию слева." : $"Будет подготовлена версия {SelectedVersion}";
+    public string StatusText => LocalizeHomeStatus(StatusTextRaw);
+    public string VersionCatalogStatus => LocalizeHomeStatus(VersionCatalogStatusRaw);
+    public string LoaderCatalogStatus => LocalizeHomeStatus(LoaderCatalogStatusRaw);
+    public string SelectedFamilyLatestVersionLabel => SelectedFamily is null
+        ? string.Empty
+        : string.Format(_localization.Culture, _localization.Get("Home.LatestVersionLabel", "Последняя версия {0}"), SelectedFamily.LatestVersion);
+    public string SelectedVersionSummary => string.IsNullOrEmpty(SelectedVersion)
+        ? _localization.Get("Home.SelectVersionHint", "Выбери версию слева.")
+        : string.Format(_localization.Culture, _localization.Get("Home.VersionWillPrepare", "Будет подготовлена версия {0}"), SelectedVersion);
 
-    public HomeViewModel(IGameVersionCatalog catalog, IGameLoaderCatalog loaderCatalog, ILaunchOrchestrator launchOrchestrator, IGameAuthService auth, IThemeService theme, ISettingsService settings, InstanceService instances, ILogger<HomeViewModel> logger)
+    partial void OnStatusTextRawChanged(string value) => OnPropertyChanged(nameof(StatusText));
+    partial void OnVersionCatalogStatusRawChanged(string value) => OnPropertyChanged(nameof(VersionCatalogStatus));
+    partial void OnLoaderCatalogStatusRawChanged(string value) => OnPropertyChanged(nameof(LoaderCatalogStatus));
+
+    private string LocalizeHomeStatus(string text)
+    {
+        var key = text switch
+        {
+            "Загружаю официальный список версий Minecraft…" => "Home.Status.LoadingOfficialVersions",
+            "Загружаю версии Minecraft…" => "Home.Status.LoadingVersions",
+            "Выбери версию игры, чтобы проверить загрузчики." => "Home.Status.SelectVersionForLoaders",
+            "Список версий обновлён из манифеста Minecraft." => "Home.Status.VersionsUpdated",
+            "Не удалось найти доступные релизы Minecraft." => "Home.Status.NoReleases",
+            "Не удалось получить манифест; корректного локального кэша нет." => "Home.Status.ManifestUnavailable",
+            "Совместимость загрузчиков проверена." => "Home.Status.LoadersChecked",
+            "Доступно для выбранной версии." => "Home.Status.LoaderAvailable",
+            "Запуск отменён." => "Home.Status.LaunchCancelled",
+            _ => string.Empty
+        };
+        if (!string.IsNullOrEmpty(key)) return _localization.Get(key, text);
+        if (text.StartsWith("Манифест Mojang обновлён ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.ManifestUpdated", text, text["Манифест Mojang обновлён ".Length..]);
+        if (text.StartsWith("Локальный кэш версий · обновлён ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.CachedManifest", text, text["Локальный кэш версий · обновлён ".Length..]);
+        if (text.StartsWith("Нет соединения с Mojang · локальный кэш от ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.OfflineManifest", text, text["Нет соединения с Mojang · локальный кэш от ".Length..]);
+        if (text.StartsWith("Подготавливаю Minecraft ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.Preparing", text, text["Подготавливаю Minecraft ".Length..].TrimEnd('…'));
+        if (text.StartsWith("Подготовка Minecraft ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.Preparing", text, text["Подготовка Minecraft ".Length..].TrimEnd('…'));
+        if (text.StartsWith("Установка загрузчика: ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.InstallingLoader", text, text["Установка загрузчика: ".Length..]);
+        if (text == "Загрузка файлов Minecraft…") return _localization.Get("Home.Status.DownloadingFiles", text);
+        if (text == "Запуск Java и ожидание окна Minecraft…") return _localization.Get("Home.Status.StartingGame", text);
+        if (text is "Minecraft запущен." or "Minecraft запущен") return _localization.Get("Home.Status.Running", text);
+        if (text.StartsWith("Проверяю загрузчики для Minecraft ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.CheckingLoaders", text, text["Проверяю загрузчики для Minecraft ".Length..].TrimEnd('…'));
+        if (text.StartsWith("Minecraft ", StringComparison.Ordinal) && text.Contains(" запущен (PID ", StringComparison.Ordinal))
+        {
+            var pidStart = text.IndexOf(" (PID ", StringComparison.Ordinal);
+            if (pidStart > 9 && text.EndsWith(')'))
+                return FormatHomeStatus("Home.Status.GameStarted", text, text[9..pidStart], text[(pidStart + 6)..^1]);
+        }
+        if (text.StartsWith("Не удалось загрузить манифест Minecraft: ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.ManifestLoadFailed", text, text["Не удалось загрузить манифест Minecraft: ".Length..]);
+        if (text.StartsWith("Не удалось запустить игру: ", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.LaunchFailed", text, text["Не удалось запустить игру: ".Length..]);
+        if (text.StartsWith("Не удалось проверить загрузчики: ", StringComparison.Ordinal) && text.EndsWith(". Vanilla остаётся доступна.", StringComparison.Ordinal))
+            return FormatHomeStatus("Home.Status.LoaderCheckFailed", text, text["Не удалось проверить загрузчики: ".Length..^". Vanilla остаётся доступна.".Length]);
+        return text;
+    }
+
+    private string FormatHomeStatus(string key, string fallback, params object[] args) =>
+        string.Format(_localization.Culture, _localization.Get(key, fallback), args);
+
+    public HomeViewModel(IGameVersionCatalog catalog, IGameLoaderCatalog loaderCatalog, ILaunchOrchestrator launchOrchestrator, IGameAuthService auth, IThemeService theme, ISettingsService settings, InstanceService instances, ILogger<HomeViewModel> logger, ILocalizationService localization)
     {
         _catalog = catalog;
         _loaderCatalog = loaderCatalog;
@@ -74,11 +167,24 @@ public partial class HomeViewModel : ObservableObject
         _settings = settings;
         _instances = instances;
         _logger = logger;
+        _localization = localization;
+        _localization.LanguageChanged += (_, _) =>
+        {
+            foreach (var family in Families)
+                family.ApplyLocalization(_localization);
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(VersionCatalogStatus));
+            OnPropertyChanged(nameof(LoaderCatalogStatus));
+            OnPropertyChanged(nameof(SelectedVersionSummary));
+            OnPropertyChanged(nameof(SelectedFamilyLatestVersionLabel));
+            UpdateManifestStatus();
+        };
         _ = LoadVersionsAsync();
     }
 
     partial void OnSelectedFamilyChanged(MinecraftReleaseFamily? value)
     {
+        OnPropertyChanged(nameof(SelectedFamilyLatestVersionLabel));
         ExactVersions.Clear();
         if (value is not null)
         {
@@ -136,6 +242,20 @@ public partial class HomeViewModel : ObservableObject
         _ = LoadLoaderOptionsAsync(value.MinecraftVersion);
     }
 
+    private void UpdateManifestStatus()
+    {
+        var cultureName = _localization.Get("News.DateCulture", _localization.Language);
+        var dateFormat = _localization.Get("Home.ManifestDateFormat", "dd.MM.yyyy HH:mm");
+        var culture = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+        var updatedAt = _catalog.LastManifestUpdate?.ToLocalTime().ToString(dateFormat, culture);
+        var unknownDate = _localization.Get("Home.Status.UnknownDate", "неизвестной даты");
+        var now = _localization.Get("Home.Status.Now", "сейчас");
+        VersionCatalogStatusRaw = _catalog.IsOfflineFallback
+            ? $"Нет соединения с Mojang · локальный кэш от {updatedAt ?? unknownDate}"
+            : _catalog.IsUsingCachedManifest
+                ? $"Локальный кэш версий · обновлён {updatedAt ?? unknownDate}"
+                : $"Манифест Mojang обновлён {updatedAt ?? now}";
+    }
     [RelayCommand]
     private Task RefreshVersionsAsync() => LoadVersionsAsync(forceRefresh: true);
 
@@ -154,12 +274,7 @@ public partial class HomeViewModel : ObservableObject
             var versions = forceRefresh
                 ? await _catalog.RefreshVersionsAsync()
                 : await _catalog.GetVersionsAsync();
-            var updatedAt = _catalog.LastManifestUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
-            VersionCatalogStatus = _catalog.IsOfflineFallback
-                ? $"Нет соединения с Mojang · локальный кэш от {updatedAt ?? "неизвестной даты"}"
-                : _catalog.IsUsingCachedManifest
-                    ? $"Локальный кэш версий · обновлён {updatedAt ?? "неизвестная дата"}"
-                    : $"Манифест Mojang обновлён {updatedAt ?? "сейчас"}";
+            UpdateManifestStatus();
             var visibleVersions = versions.Where(x =>
                 x.Type.Equals("release", StringComparison.OrdinalIgnoreCase) ||
                 (settings.IncludeSnapshots && x.Type.Equals("snapshot", StringComparison.OrdinalIgnoreCase)) ||
@@ -189,7 +304,11 @@ public partial class HomeViewModel : ObservableObject
                         x.Type))
                     .ToArray();
                 if (options.Length > 0)
-                    Families.Add(new MinecraftReleaseFamily(key, details.Title, details.Accent, details.Subtitle, options, ResolveArtUri(details.Art)));
+                {
+                    var family = new MinecraftReleaseFamily(key, details.Title, details.Accent, details.Subtitle, options, ResolveArtUri(details.Art));
+                    family.ApplyLocalization(_localization);
+                    Families.Add(family);
+                }
             }
             var savedInstance = settings.LastPlayedInstanceId is { } lastPlayedId
                 ? savedInstances.FirstOrDefault(x => x.Id == lastPlayedId)
@@ -208,12 +327,12 @@ public partial class HomeViewModel : ObservableObject
                 SelectedLoader = LoaderIds.First(x => x.Equals(savedInstance.LoaderType.ToString(), StringComparison.OrdinalIgnoreCase));
             else if (LoaderIds.Contains(settings.LastSelectedLoader, StringComparer.OrdinalIgnoreCase))
                 SelectedLoader = LoaderIds.First(x => x.Equals(settings.LastSelectedLoader, StringComparison.OrdinalIgnoreCase));
-            StatusText = Families.Count == 0 ? "Не удалось найти доступные релизы Minecraft." : "Список версий обновлён из манифеста Minecraft.";
+            StatusTextRaw = Families.Count == 0 ? "Не удалось найти доступные релизы Minecraft." : "Список версий обновлён из манифеста Minecraft.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось загрузить манифест Minecraft: {ex.Message}";
-            VersionCatalogStatus = "Не удалось получить манифест; корректного локального кэша нет.";
+            StatusTextRaw = $"Не удалось загрузить манифест Minecraft: {ex.Message}";
+            VersionCatalogStatusRaw = "Не удалось получить манифест; корректного локального кэша нет.";
         }
         finally { _restoringSelection = false; IsBusy = false; }
     }
@@ -237,7 +356,7 @@ public partial class HomeViewModel : ObservableObject
         {
             IsBusy = true;
             LaunchProgress = 0;
-            StatusText = $"Подготавливаю Minecraft {SelectedVersion}…";
+            StatusTextRaw = $"Подготавливаю Minecraft {SelectedVersion}…";
             using var launchCancellation = new CancellationTokenSource();
             _launchCancellation = launchCancellation;
             var settings = await _settings.LoadAsync(launchCancellation.Token);
@@ -269,20 +388,32 @@ public partial class HomeViewModel : ObservableObject
             var playerName = _auth.ActiveAccount?.Username ?? session?.Username ?? "SubReelPlayer";
             var progress = new Progress<LaunchProgress>(value =>
             {
-                StatusText = value.Message;
+                // Progress<T> posts callbacks to the UI dispatcher. Ignore queued
+                // updates after cancellation/completion so they cannot overwrite the final status.
+                if (launchCancellation.IsCancellationRequested || !IsBusy) return;
+
+                StatusTextRaw = value.Stage switch
+                {
+                    LaunchStage.Resolving => $"Подготовка Minecraft {SelectedVersion}…",
+                    LaunchStage.InstallingLoader => $"Установка загрузчика: {SelectedLoader}",
+                    LaunchStage.DownloadingFiles => "Загрузка файлов Minecraft…",
+                    LaunchStage.StartingGame => "Запуск Java и ожидание окна Minecraft…",
+                    LaunchStage.Running => "Minecraft запущен.",
+                    _ => value.Message
+                };
                 LaunchProgress = value.Fraction * 100;
             });
             Process process = await _launchOrchestrator.LaunchAsync(
                 instance, session, playerName, progress, launchCancellation.Token);
             LaunchProgress = 100;
-            StatusText = $"Minecraft {SelectedVersion} запущен (PID {process.Id}).";
+            StatusTextRaw = $"Minecraft {SelectedVersion} запущен (PID {process.Id}).";
             _ = RecordPlayTimeAsync(process, instance);
         }
-        catch (OperationCanceledException) { StatusText = "Запуск отменён."; }
+        catch (OperationCanceledException) { StatusTextRaw = "Запуск отменён."; }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Не удалось запустить Minecraft {Version} с загрузчиком {Loader}", SelectedVersion, SelectedLoader);
-            StatusText = $"Не удалось запустить игру: {DescribeFailure(ex)}";
+            StatusTextRaw = $"Не удалось запустить игру: {DescribeFailure(ex)}";
         }
         finally { _launchCancellation = null; IsBusy = false; }
     }
@@ -336,12 +467,12 @@ public partial class HomeViewModel : ObservableObject
                 settings.LastSelectedLoader = SelectedLoader;
             });
         }
-        catch (Exception ex) { StatusText = $"Не удалось сохранить выбор версии: {ex.Message}"; }
+        catch (Exception ex) { StatusTextRaw = $"Не удалось сохранить выбор версии: {ex.Message}"; }
     }
 
     private async Task LoadLoaderOptionsAsync(string minecraftVersion)
     {
-        LoaderCatalogStatus = $"Проверяю загрузчики для Minecraft {minecraftVersion}…";
+        LoaderCatalogStatusRaw = $"Проверяю загрузчики для Minecraft {minecraftVersion}…";
         try
         {
             var options = await _loaderCatalog.GetLoadersAsync(minecraftVersion);
@@ -354,7 +485,7 @@ public partial class HomeViewModel : ObservableObject
                 SelectedLoader = "Vanilla";
             OnPropertyChanged(nameof(SelectedLoaderVersion));
             var unavailableOptions = options.Where(option => !option.IsAvailable).ToArray();
-            LoaderCatalogStatus = unavailableOptions.Length == 0
+            LoaderCatalogStatusRaw = unavailableOptions.Length == 0
                 ? "Совместимость загрузчиков проверена."
                 : "Недоступные варианты: " + string.Join(" ", unavailableOptions.Select(option =>
                     $"{option.Name}: {option.AvailabilityMessage}"));
@@ -367,7 +498,7 @@ public partial class HomeViewModel : ObservableObject
             KeepSelectedInstanceLoaderAvailable(minecraftVersion);
             if (!LoaderOptions.Any(x => x.Id == SelectedLoader && x.IsAvailable))
                 SelectedLoader = "Vanilla";
-            LoaderCatalogStatus = $"Не удалось проверить загрузчики: {ex.Message}. Vanilla остаётся доступна.";
+            LoaderCatalogStatusRaw = $"Не удалось проверить загрузчики: {ex.Message}. Vanilla остаётся доступна.";
         }
     }
 
@@ -410,7 +541,7 @@ public partial class HomeViewModel : ObservableObject
         catch (Exception ex)
         {
             System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
-                StatusText = $"Игра закрылась, но не удалось сохранить время запуска: {ex.Message}");
+                StatusTextRaw = $"Игра закрылась, но не удалось сохранить время запуска: {ex.Message}");
         }
         finally { process.Dispose(); }
     }

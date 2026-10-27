@@ -1,9 +1,12 @@
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Media;
 using SubReel.Launcher.App.DesignSystem;
 using SubReel.Launcher.App.ViewModels;
 using SubReel.Launcher.App.Views;
 using SubReel.Launcher.Auth.Supabase;
 using SubReel.Launcher.Abstractions.Game;
+using SubReel.Launcher.App.Services;
 
 namespace SubReel.Launcher.App;
 
@@ -13,8 +16,9 @@ public partial class MainWindow : Window
     private readonly ISubReelAuthService _subReelAuth;
     private readonly IGameAuthService _gameAuth;
     private readonly ISupabaseGameProfileService _gameProfileService;
+    private readonly ILocalizationService _localization;
 
-    public MainWindow(MainViewModel viewModel, IWindowBackdropService backdrop, ISubReelAuthService subReelAuth, IGameAuthService gameAuth, ISupabaseGameProfileService gameProfileService)
+    public MainWindow(MainViewModel viewModel, IWindowBackdropService backdrop, ISubReelAuthService subReelAuth, IGameAuthService gameAuth, ISupabaseGameProfileService gameProfileService, ILocalizationService localization)
     {
         InitializeComponent();
         DataContext = viewModel;
@@ -22,6 +26,8 @@ public partial class MainWindow : Window
         _subReelAuth = subReelAuth;
         _gameAuth = gameAuth;
         _gameProfileService = gameProfileService;
+        _localization = localization;
+        _localization.LanguageChanged += (_, _) => UpdateWindowButtons();
         StateChanged += (_, _) => UpdateWindowButtons();
         UpdateWindowButtons();
     }
@@ -43,13 +49,14 @@ public partial class MainWindow : Window
     {
         if (MaximizeButton is null) return;
         var isMaximized = WindowState == WindowState.Maximized;
-        MaximizeButton.Content = isMaximized ? "❐" : "□";
-        MaximizeButton.ToolTip = isMaximized ? "Восстановить" : "Развернуть";
+        MaximizeIcon.Data = (Geometry)FindResource(isMaximized ? "IconRestoreGeometry" : "IconMaximizeGeometry");
+        MaximizeButton.ToolTip = _localization.Get(isMaximized ? "Shell.Restore" : "Shell.Maximize", isMaximized ? "Восстановить" : "Развернуть");
+        AutomationProperties.SetName(MaximizeButton, _localization.Get(isMaximized ? "Shell.RestoreWindow" : "Shell.MaximizeWindow", isMaximized ? "Восстановить окно" : "Развернуть окно"));
     }
 
     private void AccountMenu_Click(object sender, RoutedEventArgs e)
     {
-        var window = new AuthWindow(_subReelAuth, _gameAuth, _gameProfileService) { Owner = this };
+        var window = new AuthWindow(_subReelAuth, _gameAuth, _gameProfileService, _localization) { Owner = this };
         window.ShowDialog();
     }
 }

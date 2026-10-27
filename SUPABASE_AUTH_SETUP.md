@@ -34,44 +34,7 @@ The current execution environment does not have the `dotnet` CLI installed, so a
 
 Supabase-аккаунт и Minecraft-аккаунт остаются независимыми. Привязка сохраняет только UUID и имя игрового профиля Minecraft; access/refresh-токены Microsoft, Xbox и Minecraft в Supabase не отправляются.
 
-В Supabase SQL Editor выполни следующий SQL:
-
-```sql
-create table if not exists public.launcher_game_profiles (
-    user_id uuid primary key references auth.users(id) on delete cascade,
-    minecraft_uuid text not null,
-    minecraft_username text not null,
-    updated_at timestamptz not null default now(),
-    constraint launcher_game_profiles_uuid_not_empty check (length(trim(minecraft_uuid)) > 0),
-    constraint launcher_game_profiles_username_not_empty check (length(trim(minecraft_username)) > 0)
-);
-
-alter table public.launcher_game_profiles enable row level security;
-
-revoke all on public.launcher_game_profiles from anon;
-grant select, insert, update, delete on public.launcher_game_profiles to authenticated;
-
-drop policy if exists "Users can read own launcher game profile" on public.launcher_game_profiles;
-create policy "Users can read own launcher game profile"
-    on public.launcher_game_profiles for select to authenticated
-    using (auth.uid() = user_id);
-
-drop policy if exists "Users can insert own launcher game profile" on public.launcher_game_profiles;
-create policy "Users can insert own launcher game profile"
-    on public.launcher_game_profiles for insert to authenticated
-    with check (auth.uid() = user_id);
-
-drop policy if exists "Users can update own launcher game profile" on public.launcher_game_profiles;
-create policy "Users can update own launcher game profile"
-    on public.launcher_game_profiles for update to authenticated
-    using (auth.uid() = user_id)
-    with check (auth.uid() = user_id);
-
-drop policy if exists "Users can delete own launcher game profile" on public.launcher_game_profiles;
-create policy "Users can delete own launcher game profile"
-    on public.launcher_game_profiles for delete to authenticated
-    using (auth.uid() = user_id);
-```
+Схема и политики RLS теперь поддерживаются в Platform как `supabase/sql/032_launcher_game_profiles.sql`. Прежде чем применять миграцию, проверь существующие таблицы и историю проекта: таблица могла быть создана ранее вручную по старой версии этой инструкции. Применяй SQL через Supabase SQL Editor только после проверки, чтобы не переписывать удалённую миграционную историю.
 
 ### Поведение
 

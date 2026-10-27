@@ -1,4 +1,4 @@
-﻿
+
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -16,6 +16,7 @@ using SubReel.Launcher.Abstractions.Settings;
 using SubReel.Launcher.Core.Instances;
 using SubReel.Launcher.Core.Launching;
 using SubReel.Launcher.Core.Models;
+using SubReel.Launcher.App.Services;
 
 namespace SubReel.Launcher.App.ViewModels;
 
@@ -32,10 +33,10 @@ public partial class InstancesViewModel : ObservableObject
     private readonly IReadOnlyList<IModpackCatalog> _modpackCatalogs;
     private readonly IModpackInstaller _modrinthInstaller;
     private readonly ICurseForgeModpackInstaller _curseForgeInstaller;
+    private readonly ILocalizationService _localization;
 
     public ObservableCollection<MinecraftInstance> Instances { get; } = [];
     public ICollectionView FilteredInstances { get; }
-    public string[] SortOptions { get; } = ["Название", "Последний запуск", "Сначала избранное"];
     public bool HasInstances => Instances.Count > 0;
     public bool HasSearchNoResults => HasInstances && !FilteredInstances.Cast<MinecraftInstance>().Any();
 
@@ -62,13 +63,179 @@ public partial class InstancesViewModel : ObservableObject
     private string _memoryMbInput = "4096";
 
     [ObservableProperty]
-    private string _statusText = "Готово";
+    private string _statusTextRaw = "Готово";
+
+    public string StatusText => TranslateStatus(StatusTextRaw);
+
+    partial void OnStatusTextRawChanged(string value) => OnPropertyChanged(nameof(StatusText));
+
+    private static string StatusResourceKey(string value) => value switch
+    {
+        "Готово" => "Instances.Status.Ready",
+        "Загрузка сборок…" => "Instances.Status.Loading",
+        "Создание сборки…" => "Instances.Status.Creating",
+        "Создание чистой копии…" => "Instances.Status.Duplicating",
+        "Подготовка Minecraft…" => "Instances.Status.PreparingGame",
+        "Запуск отменён." => "Instances.Status.LaunchCancelled",
+        "Читаю манифест модпака…" => "Instances.Status.ReadingManifest",
+        "Проверяю доступность версии у провайдера…" => "Instances.Status.CheckingProvider",
+        "Введи объём памяти в МБ, например 4096." => "Instances.Status.InvalidMemory",
+        "Явный путь Java не задан. Укажи java.exe/javaw.exe в сборке или общих настройках; иначе Java будет выбрана автоматически при запуске." => "Instances.Status.JavaAuto",
+        "Папка игры пока не создана. Она появится при первом запуске сборки." => "Instances.Status.FolderNotCreated",
+        "Скачиваю архив Modrinth…" => "Instances.Status.DownloadingModpackArchive",
+        "Сборка установлена. Minecraft подготовится при первом запуске." => "Instances.Status.ModpackInstalled",
+        "Загрузка файлов Minecraft…" => "Instances.Status.DownloadingFiles",
+        "Запуск Java и ожидание окна Minecraft…" => "Instances.Status.StartingGame",
+        "Minecraft запущен." or "Minecraft запущен" => "Instances.Status.GameRunning",
+        _ => "Instances.Status.Unknown"
+    };
+
+    private string TranslateStatus(string value)
+    {
+        var key = StatusResourceKey(value);
+        if (key != "Instances.Status.Unknown")
+            return _localization.Get(key, value);
+
+        foreach (var (prefix, resourceKey) in new[]
+        {
+            ("Загружено файлов: ", "Instances.Status.DownloadedFiles"),
+            ("Распаковка файлов: ", "Instances.Status.ExtractingFiles")
+        })
+        {
+            if (!value.StartsWith(prefix, StringComparison.Ordinal)) continue;
+            var progressSeparator = value.IndexOf('/', prefix.Length);
+            if (progressSeparator > prefix.Length)
+                return Format(resourceKey, value, value[prefix.Length..progressSeparator], value[(progressSeparator + 1)..]);
+        }
+
+        const string quiltPrefix = "Обновлена версия Quilt до ";
+        const string quiltSuffix = ". Продолжаю запуск…";
+        if (value.StartsWith(quiltPrefix, StringComparison.Ordinal) && value.EndsWith(quiltSuffix, StringComparison.Ordinal))
+            return Format("Instances.Status.QuiltUpdated", value, value[quiltPrefix.Length..^quiltSuffix.Length]);
+
+        const string loaderCheckPrefix = "Проверяю ";
+        const string loaderCheckSeparator = " для Minecraft ";
+        if (value.StartsWith(loaderCheckPrefix, StringComparison.Ordinal) && value.EndsWith('…'))
+        {
+            var separator = value.IndexOf(loaderCheckSeparator, loaderCheckPrefix.Length, StringComparison.Ordinal);
+            if (separator > loaderCheckPrefix.Length)
+                return Format("Instances.Status.CheckingLoader", value,
+                    value[loaderCheckPrefix.Length..separator], value[(separator + loaderCheckSeparator.Length)..^1]);
+        }
+
+        const string preparePrefix = "Подготовка Minecraft ";
+        if (value.StartsWith(preparePrefix, StringComparison.Ordinal) && value.EndsWith('…'))
+            return Format("Instances.Status.PreparingVersion", value, value[preparePrefix.Length..^1]);
+        const string installLoaderPrefix = "Установка загрузчика: ";
+        if (value.StartsWith(installLoaderPrefix, StringComparison.Ordinal))
+            return Format("Instances.Status.InstallingLoader", value, value[installLoaderPrefix.Length..]);
+
+        if (TryTranslateJavaStatus(value, out var javaStatus))
+            return javaStatus;
+
+        if (value.StartsWith("Сборок: ", StringComparison.Ordinal) && int.TryParse(value[8..], out var count))
+            return Format("Instances.Status.Count", value, count);
+        if (value.StartsWith("Проверка Java не пройдена: ", StringComparison.Ordinal))
+            return Format("Instances.Status.JavaFailed", value, value[27..]);
+        if (value.StartsWith("Не удалось ", StringComparison.Ordinal))
+        {
+            var separator = value.IndexOf(": ", StringComparison.Ordinal);
+            if (separator > 0)
+            {
+                var action = value[..separator];
+                var detail = value[(separator + 2)..];
+                var actionKey = action switch
+                {
+                    "Не удалось загрузить сборки" => "LoadFailed",
+                    "Не удалось создать сборку" => "CreateFailed",
+                    "Не удалось сохранить изменения" => "SaveFailed",
+                    "Не удалось изменить избранное" => "FavoriteFailed",
+                    "Не удалось удалить сборку" => "DeleteFailed",
+                    "Не удалось дублировать сборку" => "DuplicateFailed",
+                    "Не удалось открыть папку игры" => "OpenFolderFailed",
+                    "Не удалось экспортировать манифест" => "ExportFailed",
+                    "Не удалось импортировать манифест" => "ImportFailed",
+                    "Не удалось запустить игру" => "LaunchFailed",
+                    _ => null
+                };
+                if (actionKey is not null) return Format($"Instances.Status.{actionKey}", value, detail);
+            }
+        }
+        if (value.StartsWith("Сборка «", StringComparison.Ordinal) && value.EndsWith("» сохранена.", StringComparison.Ordinal))
+            return Format("Instances.Status.InstanceSaved", value, value[8..^"» сохранена.".Length]);
+        if (value.StartsWith("Открыта папка «", StringComparison.Ordinal) && value.EndsWith("».", StringComparison.Ordinal))
+            return Format("Instances.Status.FolderOpened", value, value[15..^2]);
+        if (value.StartsWith("Сборка «", StringComparison.Ordinal) && value.EndsWith("» и её файлы удалены.", StringComparison.Ordinal))
+            return Format("Instances.Status.DeletedWithFiles", value, value[8..^"» и её файлы удалены.".Length]);
+        if (value.StartsWith("Запись «", StringComparison.Ordinal) && value.EndsWith("» удалена; игровые файлы сохранены.", StringComparison.Ordinal))
+            return Format("Instances.Status.DeletedRecord", value, value[8..^"» удалена; игровые файлы сохранены.".Length]);
+        if (value.StartsWith("Создана чистая копия «", StringComparison.Ordinal) && value.EndsWith("». Игровые файлы будут загружены при первом запуске.", StringComparison.Ordinal))
+            return Format("Instances.Status.Duplicated", value, value[22..^"». Игровые файлы будут загружены при первом запуске.".Length]);
+        if (value == "Добавлено в избранное.") return _localization.Get("Instances.Status.Favorited", value);
+        if (value == "Удалено из избранного.") return _localization.Get("Instances.Status.Unfavorited", value);
+        if (value.StartsWith("Minecraft ", StringComparison.Ordinal) && value.EndsWith(" запущен.", StringComparison.Ordinal))
+            return Format("Instances.Status.GameStarted", value, value[10..^" запущен.".Length]);
+
+        return value;
+    }
+
+    private bool TryTranslateJavaStatus(string value, out string translated)
+    {
+        const string unknownMarker = ") запускается. Требование Minecraft ";
+        const string unknownSuffix = " не удалось определить.";
+        var versionTextStart = value.StartsWith("Java ", StringComparison.Ordinal)
+            ? value.IndexOf(" (", StringComparison.Ordinal)
+            : -1;
+        if (versionTextStart > 5)
+        {
+            var unknownEnd = value.IndexOf(unknownMarker, versionTextStart, StringComparison.Ordinal);
+            if (unknownEnd > versionTextStart && value.EndsWith(unknownSuffix, StringComparison.Ordinal))
+            {
+                translated = Format("Instances.Status.JavaRequirementUnknown", value,
+                    value[5..versionTextStart], value[(versionTextStart + 2)..unknownEnd],
+                    value[(unknownEnd + unknownMarker.Length)..^unknownSuffix.Length]);
+                return true;
+            }
+        }
+
+        const string oldMarker = " слишком старая для Minecraft ";
+        const string requiredMarker = "; требуется Java ";
+        const string oldSuffix = " или новее.";
+        var oldEnd = value.StartsWith("Java ", StringComparison.Ordinal)
+            ? value.IndexOf(oldMarker, StringComparison.Ordinal)
+            : -1;
+        var requiredStart = oldEnd > 5 ? value.IndexOf(requiredMarker, oldEnd, StringComparison.Ordinal) : -1;
+        if (oldEnd > 5 && requiredStart > oldEnd && value.EndsWith(oldSuffix, StringComparison.Ordinal))
+        {
+            translated = Format("Instances.Status.JavaTooOld", value, value[5..oldEnd],
+                value[(oldEnd + oldMarker.Length)..requiredStart], value[(requiredStart + requiredMarker.Length)..^oldSuffix.Length]);
+            return true;
+        }
+
+        const string verifiedMarker = ") запускается и соответствует минимуму Java ";
+        const string forMinecraftMarker = " для Minecraft ";
+        var verifiedEnd = versionTextStart > 5 ? value.IndexOf(verifiedMarker, versionTextStart, StringComparison.Ordinal) : -1;
+        var minecraftStart = verifiedEnd > versionTextStart ? value.IndexOf(forMinecraftMarker, verifiedEnd, StringComparison.Ordinal) : -1;
+        if (verifiedEnd > versionTextStart && minecraftStart > verifiedEnd && value.EndsWith('.'))
+        {
+            translated = Format("Instances.Status.JavaVerified", value,
+                value[5..versionTextStart], value[(versionTextStart + 2)..verifiedEnd],
+                value[(verifiedEnd + verifiedMarker.Length)..minecraftStart], value[(minecraftStart + forMinecraftMarker.Length)..^1]);
+            return true;
+        }
+
+        translated = value;
+        return false;
+    }
+
+    private string Format(string key, string fallback, params object[] args) =>
+        string.Format(_localization.Culture, _localization.Get(key, fallback), args);
 
     [ObservableProperty]
     private string _searchText = "";
 
     [ObservableProperty]
-    private string _selectedSortOption = "Сначала избранное";
+    private string _selectedSortOption = "favorite";
 
     [ObservableProperty]
     private bool _isBusy;
@@ -86,7 +253,7 @@ public partial class InstancesViewModel : ObservableObject
     [ObservableProperty]
     private string _playerName = "SubReelPlayer";
 
-    public InstancesViewModel(InstanceService service, ILaunchOrchestrator launchOrchestrator, IGameAuthService authService, IGameLoaderCatalog loaderCatalog, IJavaRuntimeInspector javaRuntimeInspector, ISettingsService settings, IGameVersionCatalog versionCatalog, ILogger<InstancesViewModel> logger, IEnumerable<IModpackCatalog> modpackCatalogs, IModpackInstaller modrinthInstaller, ICurseForgeModpackInstaller curseForgeInstaller)
+    public InstancesViewModel(InstanceService service, ILaunchOrchestrator launchOrchestrator, IGameAuthService authService, IGameLoaderCatalog loaderCatalog, IJavaRuntimeInspector javaRuntimeInspector, ISettingsService settings, IGameVersionCatalog versionCatalog, ILogger<InstancesViewModel> logger, IEnumerable<IModpackCatalog> modpackCatalogs, IModpackInstaller modrinthInstaller, ICurseForgeModpackInstaller curseForgeInstaller, ILocalizationService localization)
     {
         _service = service;
         _launchOrchestrator = launchOrchestrator;
@@ -99,6 +266,8 @@ public partial class InstancesViewModel : ObservableObject
         _modpackCatalogs = modpackCatalogs.ToArray();
         _modrinthInstaller = modrinthInstaller;
         _curseForgeInstaller = curseForgeInstaller;
+        _localization = localization;
+        _instanceName = _localization.Get("Instances.NewInstanceDefault", "Моя сборка");
         FilteredInstances = CollectionViewSource.GetDefaultView(Instances);
         FilteredInstances.Filter = FilterInstance;
         Instances.CollectionChanged += (_, _) =>
@@ -108,6 +277,13 @@ public partial class InstancesViewModel : ObservableObject
             OnPropertyChanged(nameof(EmptyStateText));
         };
         ApplyInstanceSort();
+        _localization.LanguageChanged += (_, _) =>
+        {
+            if (_instanceName is "Моя сборка" or "My instance")
+                InstanceName = _localization.Get("Instances.NewInstanceDefault", "Моя сборка");
+            OnPropertyChanged(nameof(EmptyStateText));
+            OnPropertyChanged(nameof(StatusText));
+        };
     }
 
     partial void OnSearchTextChanged(string value)
@@ -137,12 +313,12 @@ public partial class InstancesViewModel : ObservableObject
         using (FilteredInstances.DeferRefresh())
         {
             FilteredInstances.SortDescriptions.Clear();
-            if (SelectedSortOption == "Последний запуск")
+            if (SelectedSortOption == "recent")
             {
                 FilteredInstances.SortDescriptions.Add(new SortDescription(nameof(MinecraftInstance.LastPlayedAt), ListSortDirection.Descending));
                 FilteredInstances.SortDescriptions.Add(new SortDescription(nameof(MinecraftInstance.Name), ListSortDirection.Ascending));
             }
-            else if (SelectedSortOption == "Сначала избранное")
+            else if (SelectedSortOption == "favorite")
             {
                 FilteredInstances.SortDescriptions.Add(new SortDescription(nameof(MinecraftInstance.IsFavorite), ListSortDirection.Descending));
                 FilteredInstances.SortDescriptions.Add(new SortDescription(nameof(MinecraftInstance.Name), ListSortDirection.Ascending));
@@ -157,8 +333,8 @@ public partial class InstancesViewModel : ObservableObject
     }
 
     public string EmptyStateText => HasInstances
-        ? "По запросу ничего не найдено. Попробуй другое название, версию или загрузчик."
-        : "Сборок пока нет. Создай первую сборку справа.";
+        ? _localization.Get("Instances.NoSearchResults", "По запросу ничего не найдено. Попробуй другое название, версию или загрузчик.")
+        : _localization.Get("Instances.NoInstances", "Сборок пока нет. Создай первую сборку справа.");
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -169,15 +345,15 @@ public partial class InstancesViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            StatusText = "Загрузка сборок…";
+            StatusTextRaw = "Загрузка сборок…";
 
             await RefreshItemsAsync();
 
-            StatusText = $"Сборок: {Instances.Count}";
+            StatusTextRaw = $"Сборок: {Instances.Count}";
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось загрузить сборки: {ex.Message}";
+            StatusTextRaw = $"Не удалось загрузить сборки: {ex.Message}";
         }
         finally
         {
@@ -193,14 +369,14 @@ public partial class InstancesViewModel : ObservableObject
 
         if (!int.TryParse(MemoryMbInput, out var memoryMb))
         {
-            StatusText = "Введи объём памяти в МБ, например 4096.";
+            StatusTextRaw = "Введи объём памяти в МБ, например 4096.";
             return;
         }
 
         try
         {
             IsBusy = true;
-            StatusText = "Создание сборки…";
+            StatusTextRaw = "Создание сборки…";
 
             var loaderVersion = string.IsNullOrWhiteSpace(LoaderVersion) ? null : LoaderVersion.Trim();
             if (SelectedLoader != MinecraftLoaderType.Vanilla)
@@ -233,11 +409,11 @@ public partial class InstancesViewModel : ObservableObject
             Instances.Add(instance);
             SelectedInstance = instance;
 
-            StatusText = $"Сборка «{instance.Name}» сохранена.";
+            StatusTextRaw = $"Сборка «{instance.Name}» сохранена.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось создать сборку: {ex.Message}";
+            StatusTextRaw = $"Не удалось создать сборку: {ex.Message}";
         }
         finally
         {
@@ -265,7 +441,7 @@ public partial class InstancesViewModel : ObservableObject
             }
             else if (installTargetChanged)
             {
-                StatusText = $"Проверяю {instance.LoaderType} для Minecraft {instance.MinecraftVersion}…";
+                StatusTextRaw = $"Проверяю {instance.LoaderType} для Minecraft {instance.MinecraftVersion}…";
                 var options = await _loaderCatalog.GetLoadersAsync(instance.MinecraftVersion);
                 var option = options.FirstOrDefault(item =>
                     item.Id.Equals(instance.LoaderType.ToString(), StringComparison.OrdinalIgnoreCase));
@@ -282,11 +458,11 @@ public partial class InstancesViewModel : ObservableObject
             await RefreshItemsAsync();
             SelectedInstance = Instances.FirstOrDefault(item => item.Id == instance.Id);
 
-            StatusText = $"Сборка «{instanceName}» сохранена.";
+            StatusTextRaw = $"Сборка «{instanceName}» сохранена.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось сохранить изменения: {ex.Message}";
+            StatusTextRaw = $"Не удалось сохранить изменения: {ex.Message}";
         }
         finally
         {
@@ -309,7 +485,7 @@ public partial class InstancesViewModel : ObservableObject
                 javaPath = (await _settings.LoadAsync()).JavaPath;
             if (string.IsNullOrWhiteSpace(javaPath))
             {
-                StatusText = "Явный путь Java не задан. Укажи java.exe/javaw.exe в сборке или общих настройках; иначе Java будет выбрана автоматически при запуске.";
+                StatusTextRaw = "Явный путь Java не задан. Укажи java.exe/javaw.exe в сборке или общих настройках; иначе Java будет выбрана автоматически при запуске.";
                 return;
             }
 
@@ -325,7 +501,7 @@ public partial class InstancesViewModel : ObservableObject
                 requiredMajor = null;
             }
 
-            StatusText = requiredMajor is null
+            StatusTextRaw = requiredMajor is null
                 ? $"Java {runtime.MajorVersion} ({runtime.VersionText}) запускается. Требование Minecraft {instance.MinecraftVersion} не удалось определить."
                 : runtime.MajorVersion < requiredMajor
                     ? $"Java {runtime.MajorVersion} слишком старая для Minecraft {instance.MinecraftVersion}; требуется Java {requiredMajor} или новее."
@@ -334,7 +510,7 @@ public partial class InstancesViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Не удалось проверить Java для выбранного инстанса");
-            StatusText = $"Проверка Java не пройдена: {ex.Message}";
+            StatusTextRaw = $"Проверка Java не пройдена: {ex.Message}";
         }
         finally
         {
@@ -357,13 +533,13 @@ public partial class InstancesViewModel : ObservableObject
             await _service.UpdateAsync(instance);
             await RefreshItemsAsync();
 
-            StatusText = instance.IsFavorite
+            StatusTextRaw = instance.IsFavorite
                 ? "Добавлено в избранное."
                 : "Удалено из избранного.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось изменить избранное: {ex.Message}";
+            StatusTextRaw = $"Не удалось изменить избранное: {ex.Message}";
         }
         finally
         {
@@ -379,8 +555,11 @@ public partial class InstancesViewModel : ObservableObject
 
         var instance = SelectedInstance;
         var answer = System.Windows.MessageBox.Show(
-            $"Удалить сборку «{instance.Name}»?\n\nДа — удалить также игровую папку и файлы.\nНет — удалить только запись, файлы сохранить.\nОтмена — ничего не менять.",
-            "Удаление сборки",
+            string.Join(Environment.NewLine, string.Format(_localization.Culture, _localization.Get("Instances.ConfirmDelete", "Delete instance ‘{0}’?"), instance.Name),
+                _localization.Get("Instances.ConfirmDeleteYes", "Yes — also delete its game folder and files."),
+                _localization.Get("Instances.ConfirmDeleteNo", "No — delete only the entry and keep files."),
+                _localization.Get("Instances.ConfirmDeleteCancel", "Cancel — make no changes.")),
+            _localization.Get("Instances.DeleteTitle", "Delete instance"),
             System.Windows.MessageBoxButton.YesNoCancel,
             System.Windows.MessageBoxImage.Warning);
         if (answer == System.Windows.MessageBoxResult.Cancel)
@@ -395,13 +574,13 @@ public partial class InstancesViewModel : ObservableObject
             Instances.Remove(instance);
             SelectedInstance = null;
 
-            StatusText = deleteFiles
+            StatusTextRaw = deleteFiles
                 ? $"Сборка «{instance.Name}» и её файлы удалены."
                 : $"Запись «{instance.Name}» удалена; игровые файлы сохранены.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось удалить сборку: {ex.Message}";
+            StatusTextRaw = $"Не удалось удалить сборку: {ex.Message}";
         }
         finally
         {
@@ -417,8 +596,8 @@ public partial class InstancesViewModel : ObservableObject
 
         var source = SelectedInstance;
         var answer = System.Windows.MessageBox.Show(
-            $"Создать чистую копию «{source.Name}»? Настройки профиля сохранятся, папка игры будет новой и пустой.",
-            "Дублирование сборки",
+            string.Format(_localization.Culture, _localization.Get("Instances.ConfirmDuplicate", "Create a clean copy of ‘{0}’? Profile settings will be kept, and the game folder will be new and empty."), source.Name),
+            _localization.Get("Instances.DuplicateTitle", "Duplicate instance"),
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Question);
         if (answer != System.Windows.MessageBoxResult.Yes)
@@ -427,16 +606,16 @@ public partial class InstancesViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            StatusText = "Создание чистой копии…";
+            StatusTextRaw = "Создание чистой копии…";
             var duplicate = await _service.DuplicateAsync(source);
             Instances.Add(duplicate);
             SelectedInstance = duplicate;
-            StatusText = $"Создана чистая копия «{duplicate.Name}». Игровые файлы будут загружены при первом запуске.";
+            StatusTextRaw = $"Создана чистая копия «{duplicate.Name}». Игровые файлы будут загружены при первом запуске.";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Не удалось дублировать Minecraft instance {InstanceId}", source.Id);
-            StatusText = $"Не удалось дублировать сборку: {ex.Message}";
+            StatusTextRaw = $"Не удалось дублировать сборку: {ex.Message}";
         }
         finally
         {
@@ -450,22 +629,22 @@ public partial class InstancesViewModel : ObservableObject
         if (SelectedInstance is not { } instance) return;
         try
         {
-            var path = Path.GetFullPath(instance.GameDirectory);
+            var path = _service.GetValidatedGameDirectory(instance);
             if (!Directory.Exists(path))
             {
-                StatusText = "Папка игры пока не создана. Она появится при первом запуске сборки.";
+                StatusTextRaw = "Папка игры пока не создана. Она появится при первом запуске сборки.";
                 return;
             }
 
             var startInfo = new ProcessStartInfo("explorer.exe") { UseShellExecute = true };
             startInfo.ArgumentList.Add(path);
             Process.Start(startInfo);
-            StatusText = $"Открыта папка «{instance.Name}».";
+            StatusTextRaw = $"Открыта папка «{instance.Name}».";
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not open game directory for instance {InstanceId}", instance.Id);
-            StatusText = $"Не удалось открыть папку игры: {ex.Message}";
+            StatusTextRaw = $"Не удалось открыть папку игры: {ex.Message}";
         }
     }
 
@@ -478,11 +657,11 @@ public partial class InstancesViewModel : ObservableObject
             Path.GetInvalidFileNameChars().Contains(character) ? '_' : character)).Trim();
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Title = "Экспорт манифеста сборки",
+            Title = _localization.Get("Instances.ExportTitle", "Export instance manifest"),
             FileName = string.IsNullOrWhiteSpace(safeName) ? "SubReel-instance" : safeName,
             DefaultExt = ".json",
             AddExtension = true,
-            Filter = "Манифест SubReel (*.json)|*.json"
+            Filter = _localization.Get("Instances.ManifestFilter", "SubReel manifest (*.json)|*.json")
         };
         if (dialog.ShowDialog() != true) return;
 
@@ -500,17 +679,17 @@ public partial class InstancesViewModel : ObservableObject
                 instance.ModpackManifest,
                 instance.CreatedAt,
                 instance.LastPlayedAt,
-                await CollectModFilesAsync(instance.GameDirectory),
+                await CollectModFilesAsync(_service.GetValidatedGameDirectory(instance)),
                 DateTimeOffset.UtcNow);
             var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
             jsonOptions.Converters.Add(new JsonStringEnumConverter());
-            await File.WriteAllTextAsync(dialog.FileName, JsonSerializer.Serialize(manifest, jsonOptions));
-            StatusText = $"Манифест сборки сохранён: {dialog.FileName}";
+            await WriteJsonAtomicallyAsync(dialog.FileName, manifest, jsonOptions);
+            StatusTextRaw = $"Манифест сборки сохранён: {dialog.FileName}";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Could not export manifest for instance {InstanceId}", instance.Id);
-            StatusText = $"Не удалось экспортировать манифест: {ex.Message}";
+            StatusTextRaw = $"Не удалось экспортировать манифест: {ex.Message}";
         }
     }
 
@@ -534,8 +713,8 @@ public partial class InstancesViewModel : ObservableObject
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Импорт манифеста модпака SubReel",
-            Filter = "Манифест SubReel (*.json)|*.json",
+            Title = _localization.Get("Instances.ImportTitle", "Import SubReel modpack manifest"),
+            Filter = _localization.Get("Instances.ManifestFilter", "SubReel manifest (*.json)|*.json"),
             CheckFileExists = true,
             Multiselect = false
         };
@@ -544,7 +723,7 @@ public partial class InstancesViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            StatusText = "Читаю манифест модпака…";
+            StatusTextRaw = "Читаю манифест модпака…";
             var fileInfo = new FileInfo(dialog.FileName);
             if (fileInfo.Length is <= 0 or > 1024 * 1024)
                 throw new InvalidDataException("Размер манифеста должен быть не больше 1 МБ.");
@@ -562,7 +741,7 @@ public partial class InstancesViewModel : ObservableObject
                 throw new InvalidDataException($"Провайдер «{pack.Provider}» не поддерживается этой версией лаунчера.");
             var catalog = _modpackCatalogs.FirstOrDefault(item => item.Provider == provider)
                 ?? throw new InvalidDataException($"Провайдер «{pack.Provider}» не поддерживается этой версией лаунчера.");
-            StatusText = "Проверяю доступность версии у провайдера…";
+            StatusTextRaw = "Проверяю доступность версии у провайдера…";
             var versions = await catalog.GetVersionsAsync(pack.ProjectId);
             var version = versions.FirstOrDefault(item => item.Id.Equals(pack.VersionId, StringComparison.OrdinalIgnoreCase))
                 ?? throw new InvalidOperationException("Исходная версия больше недоступна в каталоге. Ничего не установлено.");
@@ -571,20 +750,20 @@ public partial class InstancesViewModel : ObservableObject
 
             var project = new ModpackSummary(pack.ProjectId, pack.ProjectSlug, pack.ProjectTitle, string.Empty,
                 null, 0, [], catalog.Provider);
-            var progress = new Progress<ModpackInstallProgress>(update => StatusText = update.Message);
+            var progress = new Progress<ModpackInstallProgress>(update => StatusTextRaw = update.Message);
             var installed = catalog.Provider == ModpackProvider.CurseForge
                 ? await _curseForgeInstaller.InstallAsync(project, version, manifest.MemoryMb, progress)
                 : await _modrinthInstaller.InstallAsync(project, version, manifest.MemoryMb, progress);
 
             await RefreshItemsAsync();
             SelectedInstance = Instances.FirstOrDefault(item => item.Id == installed.InstanceId);
-            StatusText = $"Модпак «{installed.Name}» импортирован в новый инстанс. Исходные сборки не изменены.";
-            if (!string.IsNullOrWhiteSpace(installed.Warning)) StatusText += $" {installed.Warning}";
+            StatusTextRaw = $"Модпак «{installed.Name}» импортирован в новый инстанс. Исходные сборки не изменены.";
+            if (!string.IsNullOrWhiteSpace(installed.Warning)) StatusTextRaw += $" {installed.Warning}";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Could not import modpack manifest from {ManifestPath}", dialog.FileName);
-            StatusText = $"Не удалось импортировать манифест: {ex.Message}";
+            StatusTextRaw = $"Не удалось импортировать манифест: {ex.Message}";
         }
         finally { IsBusy = false; }
     }
@@ -622,6 +801,45 @@ public partial class InstancesViewModel : ObservableObject
 
     private sealed record InstanceExportFile(string Path, long Size, string Sha256);
 
+    private static async Task WriteJsonAtomicallyAsync<T>(
+        string filePath,
+        T value,
+        JsonSerializerOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        var fullPath = Path.GetFullPath(filePath);
+        var directory = Path.GetDirectoryName(fullPath)
+            ?? throw new InvalidOperationException("Не удалось определить папку для экспорта манифеста.");
+        Directory.CreateDirectory(directory);
+        var temporaryPath = fullPath + $".{Guid.NewGuid():N}.tmp";
+
+        try
+        {
+            await using (var stream = new FileStream(
+                             temporaryPath,
+                             FileMode.CreateNew,
+                             FileAccess.Write,
+                             FileShare.None,
+                             bufferSize: 81920,
+                             useAsync: true))
+            {
+                await JsonSerializer.SerializeAsync(stream, value, options, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+
+            File.Move(temporaryPath, fullPath, overwrite: true);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
     [RelayCommand]
     private async Task LaunchSelectedAsync()
     {
@@ -634,7 +852,7 @@ public partial class InstancesViewModel : ObservableObject
             IsBusy = true;
             IsLaunching = true;
             LaunchProgress = 0;
-            StatusText = "Подготовка Minecraft…";
+            StatusTextRaw = "Подготовка Minecraft…";
 
             using var launchCancellation = new CancellationTokenSource();
             _launchCancellation = launchCancellation;
@@ -646,13 +864,25 @@ public partial class InstancesViewModel : ObservableObject
                 {
                     instance.LoaderVersion = quilt.Version;
                     await _service.UpdateAsync(instance, launchCancellation.Token);
-                    StatusText = $"Обновлена версия Quilt до {quilt.Version}. Продолжаю запуск…";
+                    StatusTextRaw = $"Обновлена версия Quilt до {quilt.Version}. Продолжаю запуск…";
                 }
             }
             var progress = new Progress<LaunchProgress>(update =>
             {
+                // Progress<T> posts callbacks to the UI dispatcher. Ignore queued
+                // updates after cancellation/completion so they cannot overwrite the final status.
+                if (launchCancellation.IsCancellationRequested || !IsBusy) return;
+
                 LaunchProgress = update.Fraction * 100;
-                StatusText = update.Message;
+                StatusTextRaw = update.Stage switch
+                {
+                    LaunchStage.Resolving => $"Подготовка Minecraft {instance.MinecraftVersion}…",
+                    LaunchStage.InstallingLoader => $"Установка загрузчика: {instance.LoaderType}",
+                    LaunchStage.DownloadingFiles => "Загрузка файлов Minecraft…",
+                    LaunchStage.StartingGame => "Запуск Java и ожидание окна Minecraft…",
+                    LaunchStage.Running => "Minecraft запущен.",
+                    _ => update.Message
+                };
             });
 
             var session = await _authService.GetActiveSessionAsync(launchCancellation.Token);
@@ -662,16 +892,16 @@ public partial class InstancesViewModel : ObservableObject
                 _authService.ActiveAccount?.Username ?? PlayerName,
                 progress,
                 launchCancellation.Token);
-            StatusText = $"Minecraft {instance.MinecraftVersion} запущен.";
+            StatusTextRaw = $"Minecraft {instance.MinecraftVersion} запущен.";
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Запуск отменён.";
+            StatusTextRaw = "Запуск отменён.";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Не удалось запустить Minecraft instance {InstanceId} ({Version}, {Loader})", instance.Id, instance.MinecraftVersion, instance.LoaderType);
-            StatusText = $"Не удалось запустить игру: {DescribeFailure(ex)}";
+            StatusTextRaw = $"Не удалось запустить игру: {DescribeFailure(ex)}";
         }
         finally
         {

@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:SubReel.Launcher.App.Views"
+             xmlns:components="clr-namespace:SubReel.Launcher.App.Views.Components"
              xmlns:design="clr-namespace:SubReel.Launcher.App.DesignSystem">
     <UserControl.Resources>
         <views:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
@@ -17,19 +18,19 @@
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="КАТАЛОГ МОДПАКОВ" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
-            <TextBlock Text="Найди свою следующую сборку" Margin="0,8,0,0" FontSize="30" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
-            <TextBlock Text="Выбери сборку и версию — лаунчер установит её в отдельный игровой профиль." Margin="0,8,0,0" FontSize="14" Foreground="{DynamicResource TextSecondary}"/>
+            <TextBlock Text="{DynamicResource Mods.Eyebrow}" FontSize="{design:ScaledFontSize 12}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+            <TextBlock Text="{DynamicResource Mods.Title}" Style="{StaticResource DisplayTextStyle}" Margin="0,8,0,0" FontSize="{design:ScaledFontSize 30}" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+            <TextBlock Text="{DynamicResource Mods.Subtitle}" Margin="0,8,0,0" FontSize="{design:ScaledFontSize 14}" Foreground="{DynamicResource TextSecondary}"/>
         </StackPanel>
 
         <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="16" Margin="0,22,0,18">
             <design:ResponsiveTilePanel PreferredTileWidth="190" HorizontalGap="10" VerticalGap="10">
                 <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          Padding="12,9" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"
-                         ToolTip="Поиск модпаков" AutomationProperties.Name="Поиск модпаков"/>
+                         ToolTip="{DynamicResource Mods.Search}" AutomationProperties.Name="{DynamicResource Mods.Search}"/>
                 <TextBox Text="{Binding MinecraftVersion, UpdateSourceTrigger=PropertyChanged}"
                          Padding="12,9" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"
-                         ToolTip="Версия Minecraft, например 1.21.1" AutomationProperties.Name="Версия Minecraft"/>
+                         ToolTip="{DynamicResource Mods.VersionSearch}" AutomationProperties.Name="{DynamicResource Mods.MinecraftVersion}"/>
                 <ComboBox ItemsSource="{Binding Loaders}" SelectedItem="{Binding SelectedLoader}"
                           Padding="10,8" HorizontalAlignment="Stretch"/>
                 <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}"
@@ -38,9 +39,9 @@
         </Border>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
-            <Button Content="Каталог Modrinth" Command="{Binding ShowCatalogCommand}" Padding="12,7"/>
-            <Button Content="＋ Создать свою сборку" Command="{Binding BeginCustomCreationCommand}" Padding="12,7" Margin="8,0,0,0"/>
-            <Button Content="От студий · скоро" IsEnabled="False" Padding="12,7" Margin="8,0,0,0"/>
+            <Button Content="{DynamicResource Mods.ModrinthCatalog}" Command="{Binding ShowCatalogCommand}" Padding="12,7"/>
+            <Button Content="{DynamicResource Mods.CreateCustom}" Command="{Binding BeginCustomCreationCommand}" Padding="12,7" Margin="8,0,0,0"/>
+            <Button Content="{DynamicResource Mods.StudiosSoon}" IsEnabled="False" Padding="12,7" Margin="8,0,0,0"/>
         </StackPanel>
 
         <Border Grid.Row="3" Style="{StaticResource CardStyle}" Padding="24" Margin="0,0,0,14"
@@ -48,45 +49,48 @@
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <DockPanel Margin="0,0,0,18">
-                    <Button Content="Закрыть" Command="{Binding CancelCustomCreationCommand}" DockPanel.Dock="Right" Padding="12,7"/>
+                    <Button Content="{DynamicResource Mods.Close}" Command="{Binding CancelCustomCreationCommand}" DockPanel.Dock="Right" Padding="12,7"/>
                     <StackPanel>
-                        <TextBlock Text="Мастер собственной сборки" FontSize="23" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{DynamicResource Mods.WizardTitle}" FontSize="{design:ScaledFontSize 23}" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
                         <TextBlock Text="{Binding WizardStepLabel}" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </DockPanel>
                 <Grid Grid.Row="1" MaxWidth="620" HorizontalAlignment="Stretch">
                     <StackPanel Visibility="{Binding IsWizardStepOne, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="1. Выбери версию Minecraft" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{DynamicResource Mods.WizardChooseVersion}" FontSize="{design:ScaledFontSize 18}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
                         <ComboBox ItemsSource="{Binding GameVersions}" SelectedItem="{Binding SelectedGameVersion}" DisplayMemberPath="Id" Margin="0,12,0,0" Padding="10,8" HorizontalAlignment="Stretch"/>
-                        <TextBlock Text="Загружаю версии…" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" Visibility="{Binding IsLoadingWizardOptions, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="{DynamicResource Mods.LoadingVersions}" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" Visibility="{Binding IsLoadingWizardOptions, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsWizardStepTwo, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="2. Выбери загрузчик" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{DynamicResource Mods.WizardChooseLoader}" FontSize="{design:ScaledFontSize 18}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
                         <ListBox ItemsSource="{Binding AvailableLoaders}" SelectedItem="{Binding SelectedGameLoader}" Margin="0,12,0,0" Background="Transparent" BorderThickness="0">
                             <ListBox.ItemTemplate><DataTemplate><Border Background="{DynamicResource CardRaisedBackground}" CornerRadius="10" Padding="12" Margin="0,3"><StackPanel><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/><TextBlock Text="{Binding AvailabilityMessage}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
                         </ListBox>
-                        <TextBlock Text="Проверяю совместимые загрузчики…" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" Visibility="{Binding IsLoadingWizardOptions, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="{DynamicResource Mods.LoadingLoaders}" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" Visibility="{Binding IsLoadingWizardOptions, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsWizardStepThree, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="3. Настрой профиль" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
-                        <TextBlock Text="Название" Foreground="{DynamicResource TextSecondary}" Margin="0,14,0,4"/>
+                        <TextBlock Text="{DynamicResource Mods.WizardProfile}" FontSize="{design:ScaledFontSize 18}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{DynamicResource Mods.Name}" Foreground="{DynamicResource TextSecondary}" Margin="0,14,0,4"/>
                         <TextBox Text="{Binding CustomInstanceName, UpdateSourceTrigger=PropertyChanged}" Padding="10,8"/>
-                        <TextBlock Text="Память, МБ" Foreground="{DynamicResource TextSecondary}" Margin="0,12,0,4"/>
-                        <TextBox Text="{Binding CustomMemoryMb, UpdateSourceTrigger=PropertyChanged}" Padding="10,8"/>
+                        <TextBlock Text="{DynamicResource Mods.Memory}" Foreground="{DynamicResource TextSecondary}" Margin="0,12,0,4"/>
+                        <TextBox Text="{Binding CustomMemoryMb, UpdateSourceTrigger=PropertyChanged}" Padding="10,8" Margin="0,0,0,4"/>
+                        <components:MemoryAllocationControl Value="{Binding CustomMemoryMb, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            AutomationLabel="{DynamicResource Mods.MemoryAutomation}"
+                                                            Margin="0,0,0,4"/>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsWizardStepFour, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="4. Проверь параметры" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
-                        <TextBlock Text="{Binding CustomInstanceName}" FontSize="20" Foreground="{DynamicResource TextPrimary}" Margin="0,14,0,4"/>
-                        <TextBlock Text="{Binding SelectedGameVersion.Id, StringFormat=Minecraft {0}}" Foreground="{DynamicResource TextSecondary}"/>
-                        <TextBlock Text="{Binding SelectedGameLoader.Name, StringFormat=Загрузчик: {0}}" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/>
-                        <TextBlock Text="{Binding CustomMemoryMb, StringFormat=Память: {0} МБ}" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/>
+                        <TextBlock Text="{DynamicResource Mods.WizardReview}" FontSize="{design:ScaledFontSize 18}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{Binding CustomInstanceName}" FontSize="{design:ScaledFontSize 20}" Foreground="{DynamicResource TextPrimary}" Margin="0,14,0,4"/>
+                        <TextBlock Text="{Binding WizardMinecraftSummary}" Foreground="{DynamicResource TextSecondary}"/>
+                        <TextBlock Text="{Binding WizardLoaderSummary}" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/>
+                        <TextBlock Text="{Binding WizardMemorySummary}" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Grid>
                 <DockPanel Grid.Row="2" Margin="0,20,0,0">
-                    <Button Content="Назад" Command="{Binding PreviousWizardStepCommand}" IsEnabled="{Binding CanGoBack}" Padding="14,8"/>
+                    <Button Content="{DynamicResource Mods.Back}" Command="{Binding PreviousWizardStepCommand}" IsEnabled="{Binding CanGoBack}" Padding="14,8"/>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                        <Button Content="Далее" Command="{Binding NextWizardStepCommand}" Visibility="{Binding IsWizardStepFour, Converter={StaticResource InverseBooleanToVisibilityConverter}}" Padding="18,8"/>
-                        <Button Content="Создать сборку" Command="{Binding CreateCustomInstanceCommand}" Visibility="{Binding IsWizardStepFour, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{StaticResource PrimaryButton}" Padding="18,8"/>
+                        <Button Content="{DynamicResource Mods.Next}" Command="{Binding NextWizardStepCommand}" Visibility="{Binding IsWizardStepFour, Converter={StaticResource InverseBooleanToVisibilityConverter}}" Padding="18,8"/>
+                        <Button Content="{DynamicResource Mods.CreateInstance}" Command="{Binding CreateCustomInstanceCommand}" Visibility="{Binding IsWizardStepFour, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{StaticResource PrimaryButton}" Padding="18,8"/>
                     </StackPanel>
                 </DockPanel>
             </Grid>
@@ -97,25 +101,25 @@
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <DockPanel Margin="0,0,0,16">
-                    <Button Content="← Каталог" Command="{Binding CloseVersionsCommand}" Padding="12,7" DockPanel.Dock="Right"/>
+                    <Button Content="{DynamicResource Mods.BackToCatalog}" Command="{Binding CloseVersionsCommand}" Padding="12,7" DockPanel.Dock="Right"/>
                     <StackPanel Orientation="Horizontal">
                         <Border Width="64" Height="64" CornerRadius="16" Background="{DynamicResource CardRaisedBackground}">
                             <Image Source="{Binding SelectedProject.IconUrl}" Stretch="UniformToFill"/>
                         </Border>
                         <StackPanel Margin="16,2,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding DisplayProjectTitle}" FontSize="23" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
-                            <TextBlock Text="{Binding SelectedProject.Author}" Margin="0,3,0,0" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
-                            <TextBlock Text="{Binding SelectedProject.ProviderLabel}" Margin="0,3,0,0" FontSize="11" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="{Binding DisplayProjectTitle}" FontSize="{design:ScaledFontSize 23}" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                            <TextBlock Text="{Binding SelectedProjectAuthorLabel}" Margin="0,3,0,0" FontSize="{design:ScaledFontSize 11}" Foreground="{DynamicResource TextSecondary}"/>
+                            <TextBlock Text="{Binding SelectedProject.ProviderLabel}" Margin="0,3,0,0" FontSize="{design:ScaledFontSize 11}" Foreground="{DynamicResource AccentBrush}"/>
                         </StackPanel>
                     </StackPanel>
                 </DockPanel>
                 <design:ResponsiveTilePanel Grid.Row="1" PreferredTileWidth="420" HorizontalGap="24" VerticalGap="20">
                     <StackPanel>
-                        <TextBlock Text="О проекте" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{DynamicResource Mods.AboutProject}" FontSize="{design:ScaledFontSize 15}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
                         <TextBlock Text="{Binding DisplayProjectDescription}" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
-                        <TextBlock Text="{Binding SelectedProject.DownloadsLabel, StringFormat={}{0} загрузок}" Margin="0,12,0,0" Foreground="{DynamicResource TextSecondary}"/>
+                        <TextBlock Text="{Binding SelectedDownloadsLabel}" Margin="0,12,0,0" Foreground="{DynamicResource TextSecondary}"/>
                         <TextBlock Text="{Binding SelectedProject.CategoriesLabel}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
-                        <Button Content="Открыть страницу источника"
+                        <Button Content="{DynamicResource Mods.OpenSourcePage}"
                                 Command="{Binding OpenProjectSourceCommand}"
                                 CommandParameter="{Binding SelectedProject}"
                                 HorizontalAlignment="Left"
@@ -123,24 +127,27 @@
                                 Padding="12,7"/>
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="Версии сборки" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{DynamicResource Mods.ProjectVersions}" FontSize="{design:ScaledFontSize 15}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,6"/>
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding ProjectVersions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Background="{DynamicResource CardRaisedBackground}" CornerRadius="10" Padding="10" Margin="0,3">
-                                            <DockPanel>
-                                                <Button Content="{Binding InstallButtonLabel}" Command="{Binding DataContext.InstallVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}" IsEnabled="{Binding InstallActionEnabled}" DockPanel.Dock="Right" Padding="10,5" Margin="6,0,0,0" Style="{StaticResource PrimaryButton}"
-                                                        ToolTip="{Binding InstalledInstanceName}"/>
-                                                <Button Content="Открыть источник" Command="{Binding DataContext.OpenVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}" DockPanel.Dock="Right" Padding="10,5"/>
+                                            <Grid>
+                                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding VersionNumber}" Foreground="{DynamicResource AccentBrush}" FontSize="11"/>
-                                                    <TextBlock Text="{Binding CompatibilityLabel}" Foreground="{DynamicResource TextSecondary}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding VersionNumber}" Foreground="{DynamicResource AccentBrush}" FontSize="{design:ScaledFontSize 11}"/>
+                                                    <TextBlock Text="{Binding CompatibilityLabel}" Foreground="{DynamicResource TextSecondary}" FontSize="{design:ScaledFontSize 11}"/>
                                                 </StackPanel>
-                                            </DockPanel>
+                                                <WrapPanel Grid.Row="1" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                                    <Button Content="{DynamicResource Mods.OpenSource}" Command="{Binding DataContext.OpenVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}" Padding="10,5" Margin="0,0,6,0"/>
+                                                    <Button Content="{Binding InstallButtonLabel}" Command="{Binding DataContext.InstallVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}" IsEnabled="{Binding InstallActionEnabled}" Padding="10,5" Style="{StaticResource PrimaryButton}"
+                                                            ToolTip="{Binding InstalledInstanceName}"/>
+                                                </WrapPanel>
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -170,13 +177,13 @@
                                     <Image Source="{Binding IconUrl}" Stretch="UniformToFill"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                    <TextBlock Text="{Binding DisplayTitle}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding AuthorLabel}" Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding DisplayDescription}" Margin="0,4,0,0" Height="38" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{DynamicResource TextSecondary}"/>
-                                    <TextBlock Text="{Binding CategoriesLabel}" Margin="0,5,0,0" FontSize="11" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding DisplayTitle}" FontSize="{design:ScaledFontSize 16}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding AuthorLabel}" Margin="0,4,0,0" FontSize="{design:ScaledFontSize 11}" Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding DisplayDescription}" Margin="0,4,0,0" MinHeight="38" MaxHeight="58" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" FontSize="{design:ScaledFontSize 12}" Foreground="{DynamicResource TextSecondary}"/>
+                                    <TextBlock Text="{Binding CategoriesLabel}" Margin="0,5,0,0" FontSize="{design:ScaledFontSize 11}" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis"/>
                                     <DockPanel Margin="0,9,0,0">
-                                        <TextBlock Text="{Binding DownloadsLabel, StringFormat={}{0} загрузок}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
-                                        <Button Content="Открыть" Command="{Binding DataContext.OpenProjectPageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        <TextBlock Text="{Binding DownloadsLabel}" VerticalAlignment="Center" FontSize="{design:ScaledFontSize 11}" Foreground="{DynamicResource TextSecondary}"/>
+                                        <Button Content="{DynamicResource Mods.Open}" Command="{Binding DataContext.OpenProjectPageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}" DockPanel.Dock="Right" Padding="10,5" Margin="4,0,0,0"/>
                                     </DockPanel>
                                 </StackPanel>
@@ -187,13 +194,20 @@
             </ItemsControl>
         </ScrollViewer>
 
+        <components:EmptyStateCard Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   MaxWidth="480" Margin="20"
+                                   Visibility="{Binding IsCatalogEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   Title="{DynamicResource Mods.NoProjects}"
+                                   Message="{DynamicResource Mods.NoProjectsHint}"
+                                   IconKey="mods"/>
+
         <Grid Grid.Row="4" Margin="0,8,0,0">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
             <WrapPanel Grid.Row="1" HorizontalAlignment="Right" Margin="0,8,0,0">
-                <Button Content="Отменить установку" Command="{Binding CancelInstallCommand}" Visibility="{Binding IsInstalling, Converter={StaticResource BooleanToVisibilityConverter}}"
+                <Button Content="{DynamicResource Mods.CancelInstall}" Command="{Binding CancelInstallCommand}" Visibility="{Binding IsInstalling, Converter={StaticResource BooleanToVisibilityConverter}}"
                         Padding="12,7" Margin="0,0,8,0"/>
-                <Button Content="Показать ещё" Command="{Binding LoadMoreCommand}" IsEnabled="{Binding HasMore}"
+                <Button Content="{DynamicResource Mods.ShowMore}" Command="{Binding LoadMoreCommand}" IsEnabled="{Binding HasMore}"
                         Visibility="{Binding IsCatalogVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                         Padding="16,8"/>
             </WrapPanel>
