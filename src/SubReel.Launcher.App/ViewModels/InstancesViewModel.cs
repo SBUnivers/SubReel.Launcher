@@ -22,6 +22,7 @@ namespace SubReel.Launcher.App.ViewModels;
 
 public partial class InstancesViewModel : ObservableObject
 {
+    private CancellationTokenSource? _duplicateCancellation;
     private readonly InstanceService _service;
     private readonly ILaunchOrchestrator _launchOrchestrator;
     private readonly IGameAuthService _authService;
@@ -34,8 +35,13 @@ public partial class InstancesViewModel : ObservableObject
     private readonly IModpackInstaller _modrinthInstaller;
     private readonly ICurseForgeModpackInstaller _curseForgeInstaller;
     private readonly ILocalizationService _localization;
+    private readonly IInstanceModService _instanceModService;
+    private readonly IConfirmationService _confirmation;
+    private CancellationTokenSource? _modManagerCancellation;
 
     public ObservableCollection<MinecraftInstance> Instances { get; } = [];
+    public ObservableCollection<InstanceModSearchResult> ModSearchResults { get; } = [];
+    public ObservableCollection<InstalledInstanceMod> InstalledMods { get; } = [];
     public ICollectionView FilteredInstances { get; }
     public bool HasInstances => Instances.Count > 0;
     public bool HasSearchNoResults => HasInstances && !FilteredInstances.Cast<MinecraftInstance>().Any();
@@ -43,6 +49,7 @@ public partial class InstancesViewModel : ObservableObject
     public MinecraftLoaderType[] LoaderTypes { get; } =
         [MinecraftLoaderType.Vanilla, MinecraftLoaderType.Fabric,
          MinecraftLoaderType.Forge, MinecraftLoaderType.NeoForge, MinecraftLoaderType.Quilt];
+    public ModpackProvider[] ModProviders { get; } = [ModpackProvider.Modrinth, ModpackProvider.CurseForge];
 
     [ObservableProperty]
     private MinecraftInstance? _selectedInstance;
@@ -65,6 +72,19 @@ public partial class InstancesViewModel : ObservableObject
     [ObservableProperty]
     private string _statusTextRaw = "Готово";
 
+    [ObservableProperty] private bool _isDuplicateOptionsVisible;
+    [ObservableProperty] private bool _copySaves;
+    [ObservableProperty] private bool _copyGameOptions;
+    [ObservableProperty] private bool _copyResourcePacks;
+    [ObservableProperty] private bool _copyShaderPacks;
+    [ObservableProperty] private bool _copyScreenshots;
+    [ObservableProperty] private bool _copyServers;
+    [ObservableProperty] private bool _copyMods;
+    [ObservableProperty] private string _modSearchText = "";
+    [ObservableProperty] private ModpackProvider _selectedModProvider = ModpackProvider.Modrinth;
+    [ObservableProperty] private bool _isModManagerBusy;
+    [ObservableProperty] private string _modManagerStatus = "";
+
     public string StatusText => TranslateStatus(StatusTextRaw);
 
     partial void OnStatusTextRawChanged(string value) => OnPropertyChanged(nameof(StatusText));
@@ -74,7 +94,7 @@ public partial class InstancesViewModel : ObservableObject
         "Готово" => "Instances.Status.Ready",
         "Загрузка сборок…" => "Instances.Status.Loading",
         "Создание сборки…" => "Instances.Status.Creating",
-        "Создание чистой копии…" => "Instances.Status.Duplicating",
+        "Создание копии сборки…" => "Instances.Status.Duplicating",
         "Подготовка Minecraft…" => "Instances.Status.PreparingGame",
         "Запуск отменён." => "Instances.Status.LaunchCancelled",
         "Читаю манифест модпака…" => "Instances.Status.ReadingManifest",
@@ -87,6 +107,8 @@ public partial class InstancesViewModel : ObservableObject
         "Загрузка файлов Minecraft…" => "Instances.Status.DownloadingFiles",
         "Запуск Java и ожидание окна Minecraft…" => "Instances.Status.StartingGame",
         "Minecraft запущен." or "Minecraft запущен" => "Instances.Status.GameRunning",
+        "Выбери данные для копирования." => "Instances.Status.DuplicateOptions",
+        "Копирование отменено." => "Instances.Status.CopyCancelled",
         _ => "Instances.Status.Unknown"
     };
 
@@ -169,8 +191,8 @@ public partial class InstancesViewModel : ObservableObject
             return Format("Instances.Status.DeletedWithFiles", value, value[8..^"» и её файлы удалены.".Length]);
         if (value.StartsWith("Запись «", StringComparison.Ordinal) && value.EndsWith("» удалена; игровые файлы сохранены.", StringComparison.Ordinal))
             return Format("Instances.Status.DeletedRecord", value, value[8..^"» удалена; игровые файлы сохранены.".Length]);
-        if (value.StartsWith("Создана чистая копия «", StringComparison.Ordinal) && value.EndsWith("». Игровые файлы будут загружены при первом запуске.", StringComparison.Ordinal))
-            return Format("Instances.Status.Duplicated", value, value[22..^"». Игровые файлы будут загружены при первом запуске.".Length]);
+        if (value.StartsWith("Создана копия «", StringComparison.Ordinal) && value.EndsWith("».", StringComparison.Ordinal))
+            return Format("Instances.Status.Duplicated", value, value[14..^2]);
         if (value == "Добавлено в избранное.") return _localization.Get("Instances.Status.Favorited", value);
         if (value == "Удалено из избранного.") return _localization.Get("Instances.Status.Unfavorited", value);
         if (value.StartsWith("Minecraft ", StringComparison.Ordinal) && value.EndsWith(" запущен.", StringComparison.Ordinal))
@@ -253,7 +275,7 @@ public partial class InstancesViewModel : ObservableObject
     [ObservableProperty]
     private string _playerName = "SubReelPlayer";
 
-    public InstancesViewModel(InstanceService service, ILaunchOrchestrator launchOrchestrator, IGameAuthService authService, IGameLoaderCatalog loaderCatalog, IJavaRuntimeInspector javaRuntimeInspector, ISettingsService settings, IGameVersionCatalog versionCatalog, ILogger<InstancesViewModel> logger, IEnumerable<IModpackCatalog> modpackCatalogs, IModpackInstaller modrinthInstaller, ICurseForgeModpackInstaller curseForgeInstaller, ILocalizationService localization)
+    public InstancesViewModel(InstanceService service, ILaunchOrchestrator launchOrchestrator, IGameAuthService authService, IGameLoaderCatalog loaderCatalog, IJavaRuntimeInspector javaRuntimeInspector, ISettingsService settings, IGameVersionCatalog versionCatalog, ILogger<InstancesViewModel> logger, IEnumerable<IModpackCatalog> modpackCatalogs, IModpackInstaller modrinthInstaller, ICurseForgeModpackInstaller curseForgeInstaller, ILocalizationService localization, IInstanceModService instanceModService, IConfirmationService confirmation)
     {
         _service = service;
         _launchOrchestrator = launchOrchestrator;
@@ -267,6 +289,8 @@ public partial class InstancesViewModel : ObservableObject
         _modrinthInstaller = modrinthInstaller;
         _curseForgeInstaller = curseForgeInstaller;
         _localization = localization;
+        _instanceModService = instanceModService;
+        _confirmation = confirmation;
         _instanceName = _localization.Get("Instances.NewInstanceDefault", "Моя сборка");
         FilteredInstances = CollectionViewSource.GetDefaultView(Instances);
         FilteredInstances.Filter = FilterInstance;
@@ -589,36 +613,230 @@ public partial class InstancesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task DuplicateSelectedAsync()
+    private void DuplicateSelected()
     {
         if (IsBusy || SelectedInstance is null)
             return;
 
-        var source = SelectedInstance;
-        var answer = System.Windows.MessageBox.Show(
-            string.Format(_localization.Culture, _localization.Get("Instances.ConfirmDuplicate", "Create a clean copy of ‘{0}’? Profile settings will be kept, and the game folder will be new and empty."), source.Name),
-            _localization.Get("Instances.DuplicateTitle", "Duplicate instance"),
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Question);
-        if (answer != System.Windows.MessageBoxResult.Yes)
-            return;
+        CopySaves = false;
+        CopyGameOptions = false;
+        CopyResourcePacks = false;
+        CopyShaderPacks = false;
+        CopyScreenshots = false;
+        CopyServers = false;
+        CopyMods = false;
+        IsDuplicateOptionsVisible = true;
+        StatusTextRaw = "Выбери данные для копирования.";
+    }
 
+    [RelayCommand]
+    private void CancelDuplicate()
+    {
+        if (_duplicateCancellation is not null)
+        {
+            _duplicateCancellation.Cancel();
+            return;
+        }
+
+        IsDuplicateOptionsVisible = false;
+    }
+
+    [RelayCommand]
+    private async Task SearchInstanceModsAsync()
+    {
+        if (SelectedInstance is not { } instance || IsModManagerBusy) return;
+        await RunModManagerActionAsync(async cancellationToken =>
+        {
+            ModSearchResults.Clear();
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.SearchingProvider", "Searching {0}…"), SelectedModProvider);
+            var results = await _instanceModService.SearchAsync(instance, ModSearchText, cancellationToken, SelectedModProvider);
+            if (SelectedInstance?.Id != instance.Id) return;
+            foreach (var result in results) ModSearchResults.Add(result);
+            ModManagerStatus = results.Count == 0
+                ? _localization.Get("Instances.Mods.NoResults", "No compatible mods found.")
+                : string.Format(_localization.Culture, _localization.Get("Instances.Mods.Found", "Found {0} compatible mods."), results.Count);
+        });
+    }
+
+    [RelayCommand]
+    private async Task InstallInstanceModAsync(InstanceModSearchResult? mod)
+    {
+        if (SelectedInstance is not { } instance || mod is null || IsModManagerBusy) return;
+        await RunModManagerActionAsync(async cancellationToken =>
+        {
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.Installing", "Installing {0} and required dependencies…"), mod.Title);
+            await _instanceModService.InstallAsync(instance, mod, cancellationToken);
+            await RefreshInstanceModsAsync(instance);
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.Installed", "Installed {0}."), mod.Title);
+        });
+    }
+
+    [RelayCommand]
+    private async Task CheckInstanceModUpdatesAsync()
+    {
+        if (SelectedInstance is not { } instance || IsModManagerBusy) return;
+        await RunModManagerActionAsync(async cancellationToken =>
+        {
+            ModManagerStatus = _localization.Get("Instances.Mods.CheckingUpdates", "Checking mod updates…");
+            var mods = await _instanceModService.CheckUpdatesAsync(instance, cancellationToken);
+            if (SelectedInstance?.Id != instance.Id) return;
+            InstalledMods.Clear();
+            foreach (var mod in mods) InstalledMods.Add(mod);
+            var updateCount = mods.Count(mod => mod.UpdateVersionId is not null);
+            ModManagerStatus = updateCount == 0
+                ? _localization.Get("Instances.Mods.NoUpdates", "All recognized mods are up to date.")
+                : string.Format(_localization.Culture,
+                    _localization.Get("Instances.Mods.UpdatesFound", "Available updates: {0}"), updateCount);
+        });
+    }
+
+    [RelayCommand]
+    private async Task UpdateInstanceModAsync(InstalledInstanceMod? mod)
+    {
+        if (SelectedInstance is not { } instance || mod?.UpdateVersionId is null || IsModManagerBusy) return;
+        await RunModManagerActionAsync(async cancellationToken =>
+        {
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.Updating", "Updating {0}…"), mod.FileName);
+            await _instanceModService.UpdateAsync(instance, mod, cancellationToken);
+            var refreshed = await _instanceModService.CheckUpdatesAsync(instance, cancellationToken);
+            if (SelectedInstance?.Id != instance.Id) return;
+            InstalledMods.Clear();
+            foreach (var item in refreshed) InstalledMods.Add(item);
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.Updated", "Updated {0}."), mod.FileName);
+        });
+    }
+
+    [RelayCommand]
+    private async Task ToggleInstanceModAsync(InstalledInstanceMod? mod)
+    {
+        if (SelectedInstance is not { } instance || mod is null || IsModManagerBusy) return;
+        await RunModManagerActionAsync(async cancellationToken =>
+        {
+            await _instanceModService.SetEnabledAsync(instance, mod.FileName, !mod.IsEnabled, cancellationToken);
+            await RefreshInstanceModsAsync(instance);
+        });
+    }
+
+    [RelayCommand]
+    private async Task RemoveInstanceModAsync(InstalledInstanceMod? mod)
+    {
+        if (SelectedInstance is not { } instance || mod is null || IsModManagerBusy) return;
+        if (!_confirmation.Confirm(
+                _localization.Get("Instances.Mods.RemoveTitle", "Remove mod"),
+                string.Format(_localization.Culture,
+                    _localization.Get("Instances.Mods.RemoveConfirm", "Delete {0} from this instance?"), mod.FileName)))
+            return;
+        await RunModManagerActionAsync(async cancellationToken =>
+        {
+            await _instanceModService.RemoveAsync(instance, mod.FileName, cancellationToken);
+            await RefreshInstanceModsAsync(instance);
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.Removed", "Removed {0}."), mod.FileName);
+        });
+    }
+
+    [RelayCommand]
+    private void CancelModManagerOperation() => _modManagerCancellation?.Cancel();
+
+    private async Task RunModManagerActionAsync(Func<CancellationToken, Task> action)
+    {
+        using var cancellation = new CancellationTokenSource();
+        _modManagerCancellation = cancellation;
         try
         {
-            IsBusy = true;
-            StatusTextRaw = "Создание чистой копии…";
-            var duplicate = await _service.DuplicateAsync(source);
-            Instances.Add(duplicate);
-            SelectedInstance = duplicate;
-            StatusTextRaw = $"Создана чистая копия «{duplicate.Name}». Игровые файлы будут загружены при первом запуске.";
+            IsModManagerBusy = true;
+            await action(cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            ModManagerStatus = _localization.Get("Instances.Mods.Cancelled", "Mod operation cancelled.");
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Instance mod manager operation failed for {InstanceId}", SelectedInstance?.Id);
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.Failed", "Mod operation failed: {0}"), ex.Message);
+        }
+        finally
+        {
+            _modManagerCancellation = null;
+            IsModManagerBusy = false;
+        }
+    }
+
+    private async Task RefreshInstanceModsAsync(MinecraftInstance? instance)
+    {
+        ModSearchResults.Clear();
+        InstalledMods.Clear();
+        if (instance is null) return;
+        if (instance.LoaderType == MinecraftLoaderType.Vanilla)
+        {
+            ModManagerStatus = _localization.Get("Instances.Mods.RequiresLoader", "Choose Fabric, Forge, NeoForge or Quilt to manage mods.");
+            return;
+        }
+
+        try
+        {
+            var installed = await _instanceModService.GetInstalledAsync(instance);
+            if (SelectedInstance?.Id != instance.Id) return;
+            foreach (var mod in installed) InstalledMods.Add(mod);
+            ModManagerStatus = installed.Count == 0
+                ? _localization.Get("Instances.Mods.Empty", "No mods installed in this instance.")
+                : string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.InstalledCount", "Installed mods: {0}"), installed.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read mods for instance {InstanceId}", instance.Id);
+            ModManagerStatus = string.Format(_localization.Culture,
+                _localization.Get("Instances.Mods.Failed", "Mod operation failed: {0}"), ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateDuplicateAsync()
+    {
+        if (IsBusy || SelectedInstance is not { } source) return;
+
+        using var cancellation = new CancellationTokenSource();
+        _duplicateCancellation = cancellation;
+        try
+        {
+            IsBusy = true;
+            StatusTextRaw = "Создание копии сборки…";
+            var duplicate = await _service.DuplicateAsync(source, new InstanceCopyOptions(
+                Saves: CopySaves,
+                GameOptions: CopyGameOptions,
+                ResourcePacks: CopyResourcePacks,
+                ShaderPacks: CopyShaderPacks,
+                Screenshots: CopyScreenshots,
+                Servers: CopyServers,
+                Mods: CopyMods), cancellation.Token);
+            Instances.Add(duplicate);
+            SelectedInstance = duplicate;
+            IsDuplicateOptionsVisible = false;
+            StatusTextRaw = $"Создана копия «{duplicate.Name}».";
+        }
+        catch (Exception ex)
+        {
+            if (ex is OperationCanceledException)
+            {
+                IsDuplicateOptionsVisible = false;
+                StatusTextRaw = "Копирование отменено.";
+                return;
+            }
+
             _logger.LogError(ex, "Не удалось дублировать Minecraft instance {InstanceId}", source.Id);
             StatusTextRaw = $"Не удалось дублировать сборку: {ex.Message}";
         }
         finally
         {
+            _duplicateCancellation = null;
             IsBusy = false;
         }
     }
@@ -927,8 +1145,10 @@ public partial class InstancesViewModel : ObservableObject
     partial void OnSelectedInstanceChanged(MinecraftInstance? value)
     {
         HasSelection = value is not null;
+        IsDuplicateOptionsVisible = false;
         _initialSelectedLoaderType = value?.LoaderType;
         _initialSelectedMinecraftVersion = value?.MinecraftVersion;
+        _ = RefreshInstanceModsAsync(value);
     }
 
     private async Task RefreshItemsAsync()

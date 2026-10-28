@@ -5,5 +5,10 @@
     <Project Path="src/SubReel.Launcher.Auth/SubReel.Launcher.Auth.csproj" />
     <Project Path="src/SubReel.Launcher.Core/SubReel.Launcher.Core.csproj" />
     <Project Path="src/SubReel.Launcher.Infrastructure/SubReel.Launcher.Infrastructure.csproj" />
+    <Project Path="src/SubReel.Launcher.Rust.Abstractions/SubReel.Launcher.Rust.Abstractions.csproj" />
+    <Project Path="src/SubReel.Launcher.Rust.Core/SubReel.Launcher.Rust.Core.csproj" />
+    <Project Path="src/SubReel.Launcher.Rust.Infrastructure/SubReel.Launcher.Rust.Infrastructure.csproj" />
+    <Project Path="tests/SubReel.Launcher.Rust.Tests/SubReel.Launcher.Rust.Tests.csproj" />
+    <Project Path="tests/SubReel.Launcher.Core.Tests/SubReel.Launcher.Core.Tests.csproj" />
   </Folder>
 </Solution>

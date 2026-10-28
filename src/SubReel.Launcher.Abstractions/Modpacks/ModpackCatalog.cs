@@ -13,6 +13,13 @@ public sealed record ModpackQuery(
     int Offset = 0,
     int Limit = 20);
 
+public sealed record InstanceModSearchResult(string Id, string Slug, string Title, string Description,
+    string? IconUrl, long Downloads, IReadOnlyList<string> Categories)
+{
+    public ModpackProvider Provider { get; init; } = ModpackProvider.Modrinth;
+}
+
+
 public sealed record ModpackSummary(
     string Id,
     string Slug,
@@ -67,8 +74,10 @@ public sealed record CurseForgeModpackFile(int Id, int ProjectId, string Display
     long FileLength, IReadOnlyList<CurseForgeFileHash> Hashes, IReadOnlyList<string> GameVersions, bool IsAvailable)
 {
     public DateTimeOffset? PublishedAt { get; init; }
+    public IReadOnlyList<CurseForgeFileDependency> Dependencies { get; init; } = [];
 }
 public sealed record CurseForgeFileHash(string Value, int Algorithm);
+public sealed record CurseForgeFileDependency(int ModId, int FileId, int RelationType);
 public sealed record CurseForgeSearchResults(IReadOnlyList<ModpackSummary> Items, int TotalHits);
 
 /// <summary>Search contract for modpack providers; implementations are registered as modules.</summary>
@@ -115,7 +124,8 @@ public interface ILauncherSessionProvider
 
 public interface ICurseForgeApiClient
 {
-    Task<CurseForgeSearchResults> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default);
+    Task<CurseForgeSearchResults> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default,
+        bool searchMods = false);
     Task<IReadOnlyList<CurseForgeModpackFile>> GetFilesAsync(int projectId, int offset = 0, int limit = 50, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CurseForgeModpackFile>> GetFilesByIdsAsync(IReadOnlyList<int> fileIds, CancellationToken cancellationToken = default);
     Task DownloadFileAsync(int projectId, int fileId, Stream destination, IProgress<long>? progress = null, CancellationToken cancellationToken = default);

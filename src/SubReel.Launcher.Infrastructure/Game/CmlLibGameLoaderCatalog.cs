@@ -65,7 +65,13 @@ public sealed class CmlLibGameLoaderCatalog(IAppPaths paths, IHttpClientFactory 
         {
             var versions = await new FabricInstaller(httpClient).GetLoaders(minecraftVersion);
             cancellationToken.ThrowIfCancellationRequested();
-            var loader = versions.FirstOrDefault(x => x.Stable) ?? versions.FirstOrDefault();
+            // Do not depend on the provider's response ordering: choose the newest stable
+            // loader, falling back to the newest available build when no stable build exists.
+            var loader = versions
+                .Where(x => !string.IsNullOrWhiteSpace(x.Version))
+                .OrderByDescending(x => x.Stable)
+                .ThenByDescending(x => x.Version!, Comparer<string>.Create(CompareLoaderVersions))
+                .FirstOrDefault();
             return LoadFabricAsyncResult(loader?.Version, loader?.Stable == true);
         }
         catch (OperationCanceledException) { throw; }

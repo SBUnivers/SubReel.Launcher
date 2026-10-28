@@ -138,9 +138,8 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
     {
         var instancesRoot = Path.GetFullPath(paths.Instances);
         if (!Directory.Exists(instancesRoot) || IsReparsePoint(instancesRoot)) return;
-        var existingIds = (await repository.GetAllAsync(cancellationToken))
-            .Select(instance => instance.Id)
-            .ToHashSet();
+        var existingInstances = (await repository.GetAllAsync(cancellationToken))
+            .ToDictionary(instance => instance.Id);
 
         foreach (var directory in Directory.EnumerateDirectories(instancesRoot, ".deleting-*", SearchOption.TopDirectoryOnly))
         {
@@ -155,9 +154,29 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
                 !Guid.TryParseExact(identity[..separator], "N", out var instanceId) ||
                 !Guid.TryParseExact(identity[(separator + 1)..], "N", out _))
                 continue;
-            if (existingIds.Contains(instanceId))
+            if (existingInstances.TryGetValue(instanceId, out var existingInstance))
             {
-                logger.LogError("Preserving staged files for instance {InstanceId} because its catalog record still exists: {Directory}", instanceId, directory);
+                var originalDirectory = Path.GetFullPath(Path.Combine(instancesRoot, instanceId.ToString("N")));
+                if (!Directory.Exists(originalDirectory) && !File.Exists(originalDirectory) &&
+                    IsDirectChild(instancesRoot, directory) && IsDirectChild(instancesRoot, originalDirectory))
+                {
+                    try
+                    {
+                        Directory.Move(directory, originalDirectory);
+                        logger.LogWarning("Restored staged files for instance {InstanceId} because its catalog record still exists", instanceId);
+                        continue;
+                    }
+                    catch (IOException ex)
+                    {
+                        logger.LogError(ex, "Could not restore staged files for instance {InstanceId}; preserving them at {Directory}", instanceId, directory);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        logger.LogError(ex, "Could not restore staged files for instance {InstanceId}; preserving them at {Directory}", instanceId, directory);
+                    }
+                }
+
+                logger.LogError("Preserving staged files for instance {InstanceId} because its catalog record still exists: {Directory}", existingInstance.Id, directory);
                 continue;
             }
 
@@ -255,6 +274,13 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
             throw new InvalidOperationException(
                 "Сборка не найдена.");
 
+        // The game directory is part of the instance identity. Editing settings
+        // must never let a caller redirect a manifest or game files elsewhere.
+        var existingDirectory = GetValidatedGameDirectory(existing);
+        var updatedDirectory = GetValidatedGameDirectory(instance);
+        if (!string.Equals(existingDirectory, updatedDirectory, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Нельзя изменить игровую папку существующей сборки.");
+
         if (string.IsNullOrWhiteSpace(instance.Name) ||
             instance.Name.Trim().Length > 60)
             throw new ArgumentException(
@@ -273,20 +299,30 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
             throw new ArgumentOutOfRangeException(
                 nameof(instance.LoaderType));
 
+        if (instance.LoaderVersion?.Length > 64)
+            throw new ArgumentException("Слишком длинная версия загрузчика.", nameof(instance));
+
         instance.Name = instance.Name.Trim();
         instance.MinecraftVersion = instance.MinecraftVersion.Trim();
 
         if (instance.LoaderType == MinecraftLoaderType.Vanilla)
             instance.LoaderVersion = null;
+        else if (string.IsNullOrWhiteSpace(instance.LoaderVersion))
+            instance.LoaderVersion = null;
+        else
+            instance.LoaderVersion = instance.LoaderVersion.Trim();
 
         await repository.SaveAsync(instance, cancellationToken);
     }
 
     public async Task<MinecraftInstance> DuplicateAsync(
         MinecraftInstance source,
+        InstanceCopyOptions? copyOptions = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
+        copyOptions ??= new InstanceCopyOptions();
+        var sourceGameDirectory = GetValidatedGameDirectory(source);
         var suffix = " (копия)";
         var baseName = source.Name.Length + suffix.Length <= 60
             ? source.Name
@@ -305,19 +341,118 @@ public sealed class InstanceService(IInstanceRepository repository, IAppPaths pa
             duplicate.JavaPath = source.JavaPath;
             duplicate.JvmArguments = source.JvmArguments;
             duplicate.Source = "Manual";
+            await CopySelectedInstanceDataAsync(sourceGameDirectory, duplicate.GameDirectory, copyOptions, cancellationToken);
             await UpdateAsync(duplicate, cancellationToken);
             return duplicate;
         }
         catch
         {
-            await repository.DeleteAsync(duplicate.Id, CancellationToken.None);
-            if (Directory.Exists(duplicate.GameDirectory) && !Directory.EnumerateFileSystemEntries(duplicate.GameDirectory).Any())
-                Directory.Delete(duplicate.GameDirectory);
-            var root = Path.GetDirectoryName(duplicate.GameDirectory);
-            if (root is not null && Directory.Exists(root) && !Directory.EnumerateFileSystemEntries(root).Any())
-                Directory.Delete(root);
+            try { await repository.DeleteAsync(duplicate.Id, CancellationToken.None); }
+            catch (Exception cleanupException)
+            {
+                logger.LogError(cleanupException, "Could not remove the duplicate instance record after copy failed for {InstanceId}", duplicate.Id);
+            }
+
+            TryDeleteCreatedDuplicateFiles(duplicate);
             throw;
         }
+    }
+
+    private async Task CopySelectedInstanceDataAsync(
+        string sourceGameDirectory,
+        string targetGameDirectory,
+        InstanceCopyOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(sourceGameDirectory)) return;
+
+        if (options.Saves) await CopyDirectoryAsync("saves");
+        if (options.ResourcePacks) await CopyDirectoryAsync("resourcepacks");
+        if (options.ShaderPacks) await CopyDirectoryAsync("shaderpacks");
+        if (options.Screenshots) await CopyDirectoryAsync("screenshots");
+        if (options.Mods) await CopyDirectoryAsync("mods");
+        if (options.GameOptions) await CopyFileAsync("options.txt");
+        if (options.Servers) await CopyFileAsync("servers.dat");
+
+        async Task CopyDirectoryAsync(string relativePath)
+        {
+            var source = Path.Combine(sourceGameDirectory, relativePath);
+            if (!Directory.Exists(source)) return;
+            if (IsReparsePoint(source))
+                throw new InvalidOperationException($"Нельзя копировать ссылку из игровой папки: {relativePath}.");
+
+            var target = Path.Combine(targetGameDirectory, relativePath);
+            await CopyDirectoryContentsAsync(source, target, cancellationToken);
+        }
+
+        async Task CopyFileAsync(string relativePath)
+        {
+            var source = Path.Combine(sourceGameDirectory, relativePath);
+            if (!File.Exists(source)) return;
+            if (IsReparsePoint(source))
+                throw new InvalidOperationException($"Нельзя копировать ссылку из игровой папки: {relativePath}.");
+
+            var target = Path.Combine(targetGameDirectory, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            await CopyFileContentsAsync(source, target, cancellationToken);
+        }
+    }
+
+    private static async Task CopyDirectoryContentsAsync(string source, string target, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (IsReparsePoint(source))
+            throw new InvalidOperationException($"Нельзя копировать ссылку из игровой папки: {source}.");
+        Directory.CreateDirectory(target);
+
+        foreach (var entry in Directory.EnumerateFileSystemEntries(source))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsReparsePoint(entry))
+                throw new InvalidOperationException($"Нельзя копировать ссылку из игровой папки: {entry}.");
+
+            var destination = Path.Combine(target, Path.GetFileName(entry));
+            if (Directory.Exists(entry))
+                await CopyDirectoryContentsAsync(entry, destination, cancellationToken);
+            else
+                await CopyFileContentsAsync(entry, destination, cancellationToken);
+        }
+    }
+
+    private static async Task CopyFileContentsAsync(string source, string target, CancellationToken cancellationToken)
+    {
+        await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        await using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        await input.CopyToAsync(output, 64 * 1024, cancellationToken);
+        await output.FlushAsync(cancellationToken);
+        File.SetLastWriteTimeUtc(target, File.GetLastWriteTimeUtc(source));
+    }
+
+    private void TryDeleteCreatedDuplicateFiles(MinecraftInstance duplicate)
+    {
+        try
+        {
+            var instancesRoot = Path.GetFullPath(paths.Instances);
+            var instanceRoot = Path.GetFullPath(Path.Combine(instancesRoot, duplicate.Id.ToString("N")));
+            if (IsDirectChild(instancesRoot, instanceRoot) && Directory.Exists(instanceRoot) && !ContainsReparsePoint(instanceRoot))
+                Directory.Delete(instanceRoot, recursive: true);
+        }
+        catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            logger.LogWarning(cleanupException, "Could not clean files for failed duplicate instance {InstanceId}", duplicate.Id);
+        }
+    }
+
+    private static bool ContainsReparsePoint(string path)
+    {
+        if (IsReparsePoint(path)) return true;
+        if (!Directory.Exists(path)) return false;
+        foreach (var entry in Directory.EnumerateFileSystemEntries(path))
+        {
+            if (IsReparsePoint(entry)) return true;
+            if (Directory.Exists(entry) && ContainsReparsePoint(entry)) return true;
+        }
+        return false;
     }
 
     public Task DeleteAsync(Guid id, CancellationToken cancellationToken) =>

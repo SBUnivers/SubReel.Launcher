@@ -13,6 +13,7 @@ using SubReel.Launcher.Abstractions.Game;
 using SubReel.Launcher.Infrastructure.Game;
 using SubReel.Launcher.Core.Instances;
 using SubReel.Launcher.Core.Launching;
+using SubReel.Launcher.Core.Models;
 using SubReel.Launcher.Infrastructure.Persistence;
 using SubReel.Launcher.Auth;
 using SubReel.Launcher.Auth.Supabase;
@@ -24,6 +25,7 @@ using SubReel.Launcher.Abstractions.Settings;
 using SubReel.Launcher.Abstractions.Modpacks;
 using SubReel.Launcher.Infrastructure.Paths;
 using SubReel.Launcher.Infrastructure.Modpacks;
+using SubReel.Launcher.Rust.Infrastructure;
 using SubReel.Launcher.App.Views;
 using SubReel.Launcher.App.DesignSystem;
 using System.Windows.Media;
@@ -75,6 +77,7 @@ public partial class App : Application
             {
                 new HomeModule(),
                 new InstancesModule(),
+                new RustModule(),
                 new ModsModule(),
                 new NewsModule(),
                 new SettingsModule()
@@ -97,10 +100,12 @@ public partial class App : Application
                 _ => { });
 
             builder.Services.AddSingleton<IAppPaths>(appPaths);
+            builder.Services.AddRustSubsystem(appPaths.Root);
             builder.Services.AddSingleton<ISettingsService, JsonSettingsService>();
             builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
             builder.Services.AddSingleton<IThemeService, ThemeService>();
             builder.Services.AddSingleton<IMotionService, MotionService>();
+            builder.Services.AddSingleton<IConfirmationService, MessageBoxConfirmationService>();
             builder.Services.AddSingleton<IWindowBackdropService, WindowBackdropService>();
             builder.Services.AddSingleton<IInstanceRepository, JsonInstanceRepository>();
             builder.Services.AddSingleton<InstanceService>();
@@ -135,6 +140,12 @@ public partial class App : Application
             {
                 client.BaseAddress = new Uri("https://api.modrinth.com/v2/");
                 client.Timeout = TimeSpan.FromMinutes(10);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("SubReelLauncher/0.1.0 (+https://github.com/SBUnivers/SubReel.Launcher)");
+            });
+            builder.Services.AddHttpClient<IInstanceModService, ModrinthInstanceModService>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.modrinth.com/v2/");
+                client.Timeout = TimeSpan.FromMinutes(3);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("SubReelLauncher/0.1.0 (+https://github.com/SBUnivers/SubReel.Launcher)");
             });
             builder.Services.AddHttpClient<IModpackTextTranslator, DeepLModpackTextTranslator>(client =>
@@ -177,6 +188,18 @@ public partial class App : Application
             _host = builder.Build();
 
             await _host.StartAsync();
+
+            try
+            {
+                var recoveredRustDeletes = await _host.Services.GetRequiredService<SubReel.Launcher.Rust.Core.Instances.RustInstanceService>()
+                    .RecoverInterruptedDeletesAsync();
+                if (recoveredRustDeletes > 0)
+                    Log.Warning("Восстановлена очистка {Count} Rust-инстансов после прошлого аварийного завершения", recoveredRustDeletes);
+            }
+            catch (Exception recoveryException)
+            {
+                Log.Warning(recoveryException, "Не удалось восстановить прерванное удаление Rust-инстанса; запуск лаунчера продолжится");
+            }
 
             try
             {

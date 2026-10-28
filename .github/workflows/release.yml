@@ -1,0 +1,45 @@
+name: Draft launcher release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install matching Velopack CLI
+        run: dotnet tool install --global vpk --version 1.2.161
+
+      - name: Package Windows x64 release
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          ./eng/pack-release.ps1 -Version $version -Runtime win-x64
+
+      - name: Create draft GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $assets = @(Get-ChildItem -Path 'artifacts/velopack/releases' -File | ForEach-Object { $_.FullName })
+          if ($assets.Count -eq 0) { throw 'Velopack packaging produced no release assets.' }
+          gh release create $env:GITHUB_REF_NAME @assets `
+            --repo $env:GITHUB_REPOSITORY `
+            --title "SubReel Launcher $env:GITHUB_REF_NAME" `
+            --generate-notes `
+            --draft

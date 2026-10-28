@@ -281,6 +281,38 @@
                                     Margin="0,8,0,0"
                                     Padding="10"/>
 
+                            <Border Background="{DynamicResource CardBackground}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="10"
+                                    Margin="0,8,0,0"
+                                    Visibility="{Binding IsDuplicateOptionsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Instances.CopyDataTitle}"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,6"/>
+                                    <CheckBox Content="{DynamicResource Instances.CopySaves}" IsChecked="{Binding CopySaves}" Margin="0,3"/>
+                                    <CheckBox Content="{DynamicResource Instances.CopyGameOptions}" IsChecked="{Binding CopyGameOptions}" Margin="0,3"/>
+                                    <CheckBox Content="{DynamicResource Instances.CopyResourcePacks}" IsChecked="{Binding CopyResourcePacks}" Margin="0,3"/>
+                                    <CheckBox Content="{DynamicResource Instances.CopyShaderPacks}" IsChecked="{Binding CopyShaderPacks}" Margin="0,3"/>
+                                    <CheckBox Content="{DynamicResource Instances.CopyScreenshots}" IsChecked="{Binding CopyScreenshots}" Margin="0,3"/>
+                                    <CheckBox Content="{DynamicResource Instances.CopyServers}" IsChecked="{Binding CopyServers}" Margin="0,3"/>
+                                    <CheckBox Content="{DynamicResource Instances.CopyMods}" IsChecked="{Binding CopyMods}" Margin="0,3,0,8"/>
+                                    <Button Content="{DynamicResource Instances.CreateCopy}"
+                                            Command="{Binding CreateDuplicateCommand}"
+                                            IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanInverseConverter}}"
+                                            Background="{DynamicResource AccentBrush}"
+                                            Padding="9,6"/>
+                                    <Button Content="{DynamicResource Instances.CancelCopy}"
+                                            Command="{Binding CancelDuplicateCommand}"
+                                            Margin="0,6,0,0"
+                                            Padding="9,6"/>
+                                </StackPanel>
+                            </Border>
+
                             <Button Content="{DynamicResource Instances.OpenFolder}"
                                     Command="{Binding OpenSelectedFolderCommand}"
                                     IsEnabled="{Binding HasSelection}"
@@ -314,6 +346,162 @@
                                     Command="{Binding CancelLaunchCommand}"
                                     Visibility="{Binding IsLaunching, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{DynamicResource CardBackground}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="16"
+                            Margin="0,16,0,0"
+                            Visibility="{Binding HasSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Instances.Mods.Title}"
+                                       Style="{StaticResource DisplayTextStyle}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}"/>
+                            <TextBlock Text="{DynamicResource Instances.Mods.Subtitle}"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,5,0,10"/>
+                            <DockPanel>
+                                <Button Content="{DynamicResource Instances.Mods.SearchButton}"
+                                        Command="{Binding SearchInstanceModsCommand}"
+                                        IsEnabled="{Binding IsModManagerBusy, Converter={StaticResource BooleanInverseConverter}}"
+                                        DockPanel.Dock="Right"
+                                        Margin="8,0,0,0"
+                                        Padding="10,6"/>
+                                <TextBox Text="{Binding ModSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="{DynamicResource Instances.Mods.SearchHint}"
+                                         Padding="9,7"/>
+                            </DockPanel>
+                            <ComboBox ItemsSource="{Binding ModProviders}"
+                                      SelectedItem="{Binding SelectedModProvider, Mode=TwoWay}"
+                                      Margin="0,8,0,2"
+                                      Padding="7"
+                                      ToolTip="{DynamicResource Instances.Mods.Provider}"/>
+                            <TextBlock Text="{Binding ModManagerStatus}"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,4"/>
+                            <ProgressBar IsIndeterminate="True"
+                                         Height="4"
+                                         Margin="0,0,0,8"
+                                         Visibility="{Binding IsModManagerBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <Button Content="{DynamicResource Instances.Mods.CancelButton}"
+                                    Command="{Binding CancelModManagerOperationCommand}"
+                                    Visibility="{Binding IsModManagerBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Margin="0,0,0,8"
+                                    Padding="8,5"/>
+
+                            <DockPanel Margin="0,4,0,6">
+                                <Button Content="{DynamicResource Instances.Mods.CheckUpdatesButton}"
+                                        Command="{Binding CheckInstanceModUpdatesCommand}"
+                                        IsEnabled="{Binding IsModManagerBusy, Converter={StaticResource BooleanInverseConverter}}"
+                                        DockPanel.Dock="Right"
+                                        Padding="8,5"/>
+                                <TextBlock Text="{DynamicResource Instances.Mods.InstalledHeader}"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <ItemsControl ItemsSource="{Binding InstalledMods}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource CardRaisedBackground}"
+                                                CornerRadius="8"
+                                                Padding="8"
+                                                Margin="0,3">
+                                            <DockPanel LastChildFill="True">
+                                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                                    <Button Content="{DynamicResource Instances.Mods.UpdateButton}"
+                                                            Command="{Binding DataContext.UpdateInstanceModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            IsEnabled="{Binding DataContext.IsModManagerBusy, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanInverseConverter}}"
+                                                            Margin="4,0,0,0" Padding="7,4">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasUpdate}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                    <Button Command="{Binding DataContext.ToggleInstanceModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            IsEnabled="{Binding DataContext.IsModManagerBusy, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanInverseConverter}}"
+                                                            Margin="4,0,0,0" Padding="7,4">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button">
+                                                                <Setter Property="Content" Value="{DynamicResource Instances.Mods.DisableButton}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                                        <Setter Property="Content" Value="{DynamicResource Instances.Mods.EnableButton}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                    <Button Content="{DynamicResource Instances.Mods.RemoveButton}"
+                                                            Command="{Binding DataContext.RemoveInstanceModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            IsEnabled="{Binding DataContext.IsModManagerBusy, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanInverseConverter}}"
+                                                            Margin="4,0,0,0" Padding="7,4"/>
+                                                </StackPanel>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding FileName}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding SizeBytes, StringFormat={}{0:N0} B}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextSecondary}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="{DynamicResource Instances.Mods.SearchResultsHeader}"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       FontWeight="SemiBold"
+                                       Margin="0,12,0,6"/>
+                            <ItemsControl ItemsSource="{Binding ModSearchResults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource CardRaisedBackground}"
+                                                CornerRadius="8"
+                                                Padding="9"
+                                                Margin="0,3">
+                                            <DockPanel LastChildFill="True">
+                                                <Button Content="{DynamicResource Instances.Mods.InstallButton}"
+                                                        Command="{Binding DataContext.InstallInstanceModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        IsEnabled="{Binding DataContext.IsModManagerBusy, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanInverseConverter}}"
+                                                        DockPanel.Dock="Right"
+                                                        Margin="8,0,0,0"
+                                                        Padding="8,5"/>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Foreground="{DynamicResource TextSecondary}"
+                                                               TextWrapping="Wrap"
+                                                               MaxHeight="40"
+                                                               Margin="0,3,0,0"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
                 </StackPanel>

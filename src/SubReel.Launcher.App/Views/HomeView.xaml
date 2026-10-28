@@ -68,24 +68,80 @@
     <Grid x:Name="Root" Margin="28" ClipToBounds="True">
         <Grid x:Name="BrowseLayer" RenderTransformOrigin="0.5,0.5">
             <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <StackPanel>
                 <TextBlock Text="{DynamicResource Home.Eyebrow}" FontSize="{design:ScaledFontSize 10}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                 <TextBlock Text="{DynamicResource Home.ChooseVersion}" Style="{StaticResource DisplayTextStyle}" FontSize="{design:ScaledFontSize 34}" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" Margin="0,7,0,0"/>
                 <TextBlock Text="{DynamicResource Home.ReleaseDescription}" FontSize="{design:ScaledFontSize 13}" Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
             </StackPanel>
-            <TextBlock Grid.Row="1" Text="{Binding StatusText}" Foreground="{StaticResource TextSecondary}" Margin="0,20,0,12"/>
-            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Padding="2,4,2,18">
-                <ItemsControl ItemsSource="{Binding Families}">
+            <Border Grid.Row="1" MinHeight="132" MaxHeight="190" Margin="0,14,0,8" CornerRadius="22" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" Background="{DynamicResource CardBackground}" ClipToBounds="True">
+                <Grid>
+                    <Image Source="{Binding HeroArtUri}" Stretch="UniformToFill" Opacity="0.32" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Rectangle><Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#D90A0D16" Offset="0"/><GradientStop Color="#990A0D16" Offset="1"/></LinearGradientBrush></Rectangle.Fill></Rectangle>
+                    <design:ResponsiveTilePanel PreferredTileWidth="280" HorizontalGap="16" VerticalGap="12" Margin="22,16">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Home.HeroEyebrow}" FontSize="{design:ScaledFontSize 10}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="{Binding HeroTitle}" FontSize="{design:ScaledFontSize 29}" FontWeight="ExtraBold" Foreground="{DynamicResource TextPrimary}" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding HeroSubtitle}" FontSize="{design:ScaledFontSize 12}" Foreground="{DynamicResource ArtworkTextBrush}" Margin="0,4,0,10" TextTrimming="CharacterEllipsis"/>
+                            <Button Content="{DynamicResource Home.HeroChooseVersion}" Command="{Binding OpenVersionPickerCommand}" HorizontalAlignment="Left" Padding="13,7"/>
+                        </StackPanel>
+                        <Button Command="{Binding OpenNewsCommand}" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" Padding="14,11" HorizontalContentAlignment="Left" VerticalAlignment="Center" ToolTip="{DynamicResource Home.NewsTeaserHelp}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Home.NewsTeaser}" FontSize="{design:ScaledFontSize 10}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                <TextBlock Text="{Binding FeaturedNewsTitle}" FontSize="{design:ScaledFontSize 14}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Margin="0,5,0,0" TextWrapping="Wrap" MaxHeight="44"/>
+                                <TextBlock Text="{Binding FeaturedNewsDate}" FontSize="{design:ScaledFontSize 10}" Foreground="{DynamicResource TextSecondary}" Margin="0,5,0,0"/>
+                            </StackPanel>
+                        </Button>
+                    </design:ResponsiveTilePanel>
+                </Grid>
+            </Border>
+            <DockPanel Grid.Row="2" Margin="0,3,0,6" LastChildFill="True">
+                <Button DockPanel.Dock="Right" Content="{DynamicResource Home.RefreshManifest}" Command="{Binding RefreshVersionsCommand}" Padding="10,5" Margin="8,0,0,0"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding VersionCatalogStatus}" Foreground="{DynamicResource TextTertiary}" FontSize="{design:ScaledFontSize 9}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                </StackPanel>
+            </DockPanel>
+            <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Padding="2,4,2,18">
+                <Grid>
+                <ItemsControl ItemsSource="{Binding Families}" Visibility="{Binding HasVersionFamilies, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemContainerStyle><Style TargetType="ContentPresenter"><Setter Property="Margin" Value="0,0,14,0"/></Style></ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate><DataTemplate DataType="vm:MinecraftReleaseFamily">
                         <Button Style="{StaticResource ReleaseCardButton}" Tag="{Binding Accent}" Command="{Binding DataContext.SelectFamilyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Width="216" Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" MaxHeight="350" AutomationProperties.Name="{Binding Id}" AutomationProperties.HelpText="{DynamicResource Home.FamilyHelp}"/>
                     </DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="440" Margin="24" Visibility="{Binding HasVersionFamilies, Converter={StaticResource BooleanInverseConverter}}">
+                    <TextBlock Text="{DynamicResource Home.NoVersionsTitle}" FontSize="{design:ScaledFontSize 21}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                    <TextBlock Text="{DynamicResource Home.NoVersionsDescription}" FontSize="{design:ScaledFontSize 12}" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,7,0,14"/>
+                    <Button Content="{DynamicResource Home.RefreshManifest}" Command="{Binding RefreshVersionsCommand}" HorizontalAlignment="Center" Padding="14,8"/>
+                </StackPanel>
+                </Grid>
             </ScrollViewer>
-            <Border Grid.Row="3" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="16,12">
-                <DockPanel><Button DockPanel.Dock="Right" Content="{DynamicResource Home.RefreshManifest}" Command="{Binding RefreshVersionsCommand}" Padding="12,7"/><TextBlock Text="{Binding VersionCatalogStatus}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,14,0"/></DockPanel>
+            <Border Grid.Row="4" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="12,9">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="{DynamicResource Home.ManageInstances}" Command="{Binding OpenInstancesCommand}" Padding="12,8" Margin="0,0,10,0"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Grid>
+                            <ComboBox ItemsSource="{Binding Instances}" SelectedItem="{Binding SelectedInstance, Mode=TwoWay}" DisplayMemberPath="DisplayName" MinWidth="120" MaxWidth="210" Padding="7,5" ToolTip="{DynamicResource Home.InstanceHelp}"/>
+                            <TextBlock Text="{DynamicResource Home.NoInstanceSelected}" Foreground="{DynamicResource TextTertiary}" FontSize="{design:ScaledFontSize 10}" VerticalAlignment="Center" Margin="9,0,28,0" TextTrimming="CharacterEllipsis" IsHitTestVisible="False" Visibility="{Binding HasSelectedInstance, Converter={StaticResource BooleanInverseConverter}}"/>
+                        </Grid>
+                        <Border Background="{DynamicResource CardRaisedBackground}" BorderBrush="{DynamicResource GlassBorderSubtleBrush}" BorderThickness="1" CornerRadius="10" Padding="10,7" Margin="8,0,0,0">
+                            <TextBlock Text="{Binding SelectedVersionSummary}" Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis" MaxWidth="125"/>
+                        </Border>
+                    </StackPanel>
+                    <Button Grid.Column="2" Command="{Binding PlayCommand}" IsEnabled="{Binding CanPlay}" MinWidth="140" Padding="18,10" Margin="10,0,0,0" Background="{DynamicResource AccentBrush}" BorderThickness="0" FontWeight="Bold" AutomationProperties.Name="{DynamicResource Home.LaunchMinecraft}" AutomationProperties.HelpText="{Binding StatusText}">
+                        <Grid MinWidth="110" ClipToBounds="True">
+                            <ProgressBar Style="{x:Null}" Value="{Binding LaunchProgress}" Maximum="100" Foreground="{DynamicResource AccentTextBrush}" Background="Transparent" Opacity="0.18" IsHitTestVisible="False" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ProgressBar.Template><ControlTemplate TargetType="ProgressBar"><Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="9" ClipToBounds="True"><Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" HorizontalAlignment="Left" CornerRadius="9"/></Border></ControlTemplate></ProgressBar.Template>
+                            </ProgressBar>
+                            <TextBlock Text="{DynamicResource Home.Play}" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" Visibility="{Binding CanPlay, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <TextBlock Text="{DynamicResource Home.Preparing}" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <TextBlock Text="{DynamicResource Home.Running}" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" Visibility="{Binding IsSelectedInstanceRunning, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        </Grid>
+                    </Button>
+                </Grid>
             </Border>
         </Grid>
 
@@ -167,7 +223,7 @@
             <design:ResponsiveTilePanel Grid.Row="2" PreferredTileWidth="320" HorizontalGap="16" VerticalGap="12">
                 <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                 <StackPanel>
-                    <Button Command="{Binding PlayCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanInverseConverter}}" MinWidth="180" Padding="25,16" Background="{DynamicResource AccentBrush}" BorderThickness="0" FontSize="{design:ScaledFontSize 16}" FontWeight="Bold" AutomationProperties.Name="{DynamicResource Home.LaunchMinecraft}" AutomationProperties.HelpText="{Binding StatusText}">
+                    <Button Command="{Binding PlayCommand}" IsEnabled="{Binding CanPlay}" MinWidth="180" Padding="25,16" Background="{DynamicResource AccentBrush}" BorderThickness="0" FontSize="{design:ScaledFontSize 16}" FontWeight="Bold" AutomationProperties.Name="{DynamicResource Home.LaunchMinecraft}" AutomationProperties.HelpText="{Binding StatusText}">
                         <Button.Content><Grid MinWidth="130" ClipToBounds="True">
                             <ProgressBar Style="{x:Null}" Value="{Binding LaunchProgress}" Maximum="100" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Foreground="{DynamicResource AccentTextBrush}" Background="Transparent" Opacity="0.14" IsHitTestVisible="False" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <ProgressBar.Template>
@@ -178,8 +234,9 @@
                                     </ControlTemplate>
                                 </ProgressBar.Template>
                             </ProgressBar>
-                            <TextBlock Text="{DynamicResource Home.Play}" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" Visibility="{Binding IsBusy, Converter={StaticResource BooleanInverseConverter}}"/>
+                            <TextBlock Text="{DynamicResource Home.Play}" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" Visibility="{Binding CanPlay, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                             <TextBlock Text="{DynamicResource Home.Preparing}" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <TextBlock Text="{DynamicResource Home.Running}" Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" Visibility="{Binding IsSelectedInstanceRunning, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                         </Grid></Button.Content>
                     </Button>
                     <Button Content="{DynamicResource Home.Cancel}" Command="{Binding CancelLaunchCommand}" Margin="0,8,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>

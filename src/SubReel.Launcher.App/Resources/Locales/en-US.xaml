@@ -222,6 +222,18 @@
     <sys:String x:Key="Home.Eyebrow" xmlns:sys="clr-namespace:System;assembly=mscorlib">YOUR NEXT STORY</sys:String>
     <sys:String x:Key="Home.ChooseVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a version</sys:String>
     <sys:String x:Key="Home.ReleaseDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">Releases and snapshots from the official Minecraft manifest.</sys:String>
+    <sys:String x:Key="Home.NoVersionsTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Versions are unavailable</sys:String>
+    <sys:String x:Key="Home.NoVersionsDescription" xmlns:sys="clr-namespace:System;assembly=mscorlib">The version list could not be loaded and no local cache is available. Check your connection and try again.</sys:String>
+    <sys:String x:Key="Home.HeroEyebrow" xmlns:sys="clr-namespace:System;assembly=mscorlib">YOUR WORLD. YOUR RULES.</sys:String>
+    <sys:String x:Key="Home.HeroFallbackTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Your world. Your rules.</sys:String>
+    <sys:String x:Key="Home.HeroFallbackSubtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose an instance and continue your adventure.</sys:String>
+    <sys:String x:Key="Home.HeroChooseVersion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Configure version</sys:String>
+    <sys:String x:Key="Home.ManageInstances" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instances</sys:String>
+    <sys:String x:Key="Home.NoInstanceSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a build or create one by launching</sys:String>
+    <sys:String x:Key="Home.NewsTeaser" xmlns:sys="clr-namespace:System;assembly=mscorlib">LATEST PROJECT NEWS</sys:String>
+    <sys:String x:Key="Home.NewsTeaserHelp" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open SubReel news</sys:String>
+    <sys:String x:Key="Home.NewsFallbackTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">SubReel updates</sys:String>
+    <sys:String x:Key="Home.NewsFallbackSubtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open news feed</sys:String>
     <sys:String x:Key="Home.FamilyHelp" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a Minecraft version family</sys:String>
     <sys:String x:Key="Home.RefreshManifest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Refresh manifest</sys:String>
     <sys:String x:Key="Home.Back" xmlns:sys="clr-namespace:System;assembly=mscorlib">← Back</sys:String>
@@ -234,6 +246,7 @@
     <sys:String x:Key="Home.LaunchMinecraft" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launch Minecraft</sys:String>
     <sys:String x:Key="Home.Play" xmlns:sys="clr-namespace:System;assembly=mscorlib">Play</sys:String>
     <sys:String x:Key="Home.Preparing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing…</sys:String>
+    <sys:String x:Key="Home.Running" xmlns:sys="clr-namespace:System;assembly=mscorlib">Game is running</sys:String>
     <sys:String x:Key="Home.Cancel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel launch</sys:String>
     <sys:String x:Key="Memory.Min" xmlns:sys="clr-namespace:System;assembly=mscorlib">512 MB</sys:String>
     <sys:String x:Key="Memory.Max" xmlns:sys="clr-namespace:System;assembly=mscorlib">32 GB</sys:String>
@@ -284,7 +297,50 @@
     <sys:String x:Key="Instances.CheckJava" xmlns:sys="clr-namespace:System;assembly=mscorlib">Check Java</sys:String>
     <sys:String x:Key="Instances.Save" xmlns:sys="clr-namespace:System;assembly=mscorlib">Save changes</sys:String>
     <sys:String x:Key="Instances.Delete" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete instance</sys:String>
-    <sys:String x:Key="Instances.Duplicate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Duplicate as clean instance</sys:String>
+    <sys:String x:Key="Instances.Duplicate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create copy</sys:String>
+    <sys:String x:Key="Instances.CopyDataTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose data to copy into the new instance</sys:String>
+    <sys:String x:Key="Instances.Mods.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mods for this instance</sys:String>
+    <sys:String x:Key="Instances.Mods.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Search and install mods from Modrinth or CurseForge for this instance.</sys:String>
+    <sys:String x:Key="Instances.Mods.Provider" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mod source</sys:String>
+    <sys:String x:Key="Instances.Mods.SearchingProvider" xmlns:sys="clr-namespace:System;assembly=mscorlib">Searching {0}…</sys:String>
+    <sys:String x:Key="Instances.Mods.SearchHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">For example, Sodium or map</sys:String>
+    <sys:String x:Key="Instances.Mods.SearchButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Search</sys:String>
+    <sys:String x:Key="Instances.Mods.CancelButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel operation</sys:String>
+    <sys:String x:Key="Instances.Mods.CheckUpdatesButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Check for updates</sys:String>
+    <sys:String x:Key="Instances.Mods.UpdateButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Update</sys:String>
+    <sys:String x:Key="Instances.Mods.InstalledHeader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installed</sys:String>
+    <sys:String x:Key="Instances.Mods.SearchResultsHeader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modrinth results</sys:String>
+    <sys:String x:Key="Instances.Mods.InstallButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Install</sys:String>
+    <sys:String x:Key="Instances.Mods.RemoveButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Remove</sys:String>
+    <sys:String x:Key="Instances.Mods.EnableButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enable</sys:String>
+    <sys:String x:Key="Instances.Mods.DisableButton" xmlns:sys="clr-namespace:System;assembly=mscorlib">Disable</sys:String>
+    <sys:String x:Key="Instances.Mods.Searching" xmlns:sys="clr-namespace:System;assembly=mscorlib">Searching compatible mods on Modrinth…</sys:String>
+    <sys:String x:Key="Instances.Mods.NoResults" xmlns:sys="clr-namespace:System;assembly=mscorlib">No compatible mods found.</sys:String>
+    <sys:String x:Key="Instances.Mods.Found" xmlns:sys="clr-namespace:System;assembly=mscorlib">Found {0} compatible mods.</sys:String>
+    <sys:String x:Key="Instances.Mods.Installing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installing {0} and required dependencies…</sys:String>
+    <sys:String x:Key="Instances.Mods.Installed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installed {0}.</sys:String>
+    <sys:String x:Key="Instances.Mods.Empty" xmlns:sys="clr-namespace:System;assembly=mscorlib">No mods installed in this instance.</sys:String>
+    <sys:String x:Key="Instances.Mods.InstalledCount" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installed mods: {0}</sys:String>
+    <sys:String x:Key="Instances.Mods.RequiresLoader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose Fabric, Forge, NeoForge or Quilt to manage mods.</sys:String>
+    <sys:String x:Key="Instances.Mods.RemoveTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Remove mod</sys:String>
+    <sys:String x:Key="Instances.Mods.RemoveConfirm" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete {0} from this instance?</sys:String>
+    <sys:String x:Key="Instances.Mods.Removed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Removed {0}.</sys:String>
+    <sys:String x:Key="Instances.Mods.Failed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mod operation failed: {0}</sys:String>
+    <sys:String x:Key="Instances.Mods.Cancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mod operation cancelled.</sys:String>
+    <sys:String x:Key="Instances.Mods.CheckingUpdates" xmlns:sys="clr-namespace:System;assembly=mscorlib">Checking mod updates…</sys:String>
+    <sys:String x:Key="Instances.Mods.NoUpdates" xmlns:sys="clr-namespace:System;assembly=mscorlib">All recognized mods are up to date.</sys:String>
+    <sys:String x:Key="Instances.Mods.UpdatesFound" xmlns:sys="clr-namespace:System;assembly=mscorlib">Available updates: {0}</sys:String>
+    <sys:String x:Key="Instances.Mods.Updating" xmlns:sys="clr-namespace:System;assembly=mscorlib">Updating {0}…</sys:String>
+    <sys:String x:Key="Instances.Mods.Updated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Updated {0}.</sys:String>
+    <sys:String x:Key="Instances.CopySaves" xmlns:sys="clr-namespace:System;assembly=mscorlib">Worlds</sys:String>
+    <sys:String x:Key="Instances.CopyGameOptions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Game options</sys:String>
+    <sys:String x:Key="Instances.CopyResourcePacks" xmlns:sys="clr-namespace:System;assembly=mscorlib">Resource packs</sys:String>
+    <sys:String x:Key="Instances.CopyShaderPacks" xmlns:sys="clr-namespace:System;assembly=mscorlib">Shader packs</sys:String>
+    <sys:String x:Key="Instances.CopyScreenshots" xmlns:sys="clr-namespace:System;assembly=mscorlib">Screenshots</sys:String>
+    <sys:String x:Key="Instances.CopyServers" xmlns:sys="clr-namespace:System;assembly=mscorlib">Server list</sys:String>
+    <sys:String x:Key="Instances.CopyMods" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mods</sys:String>
+    <sys:String x:Key="Instances.CreateCopy" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create copy</sys:String>
+    <sys:String x:Key="Instances.CancelCopy" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel</sys:String>
     <sys:String x:Key="Instances.OpenFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open game folder</sys:String>
     <sys:String x:Key="Instances.Export" xmlns:sys="clr-namespace:System;assembly=mscorlib">Export manifest</sys:String>
     <sys:String x:Key="Instances.Import" xmlns:sys="clr-namespace:System;assembly=mscorlib">Import modpack manifest</sys:String>
@@ -337,7 +393,10 @@
     <sys:String x:Key="Instances.Status.FolderOpened" xmlns:sys="clr-namespace:System;assembly=mscorlib">Opened folder “{0}”.</sys:String>
     <sys:String x:Key="Instances.Status.DeletedWithFiles" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance “{0}” and its files were deleted.</sys:String>
     <sys:String x:Key="Instances.Status.DeletedRecord" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance “{0}” was deleted; game files were kept.</sys:String>
-    <sys:String x:Key="Instances.Status.Duplicated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Clean copy “{0}” created. Game files will be downloaded on first launch.</sys:String>
+    <sys:String x:Key="Instances.Status.DuplicateOptions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose data to copy.</sys:String>
+    <sys:String x:Key="Instances.Status.CopyCancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Copy cancelled.</sys:String>
+    <sys:String x:Key="Instances.Status.Duplicating" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating instance copy…</sys:String>
+    <sys:String x:Key="Instances.Status.Duplicated" xmlns:sys="clr-namespace:System;assembly=mscorlib">Copy “{0}” created.</sys:String>
     <sys:String x:Key="Instances.Status.Favorited" xmlns:sys="clr-namespace:System;assembly=mscorlib">Added to favorites.</sys:String>
     <sys:String x:Key="Instances.Status.Unfavorited" xmlns:sys="clr-namespace:System;assembly=mscorlib">Removed from favorites.</sys:String>
     <sys:String x:Key="Instances.Status.GameStarted" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minecraft {0} started.</sys:String>
@@ -539,4 +598,44 @@ Session active. Minecraft game account is managed separately.</sys:String>
     <sys:String x:Key="Settings.Status.UpdateSourceMissing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Update source is not configured. Set Updates:FeedUrl after publishing releases.</sys:String>
     <sys:String x:Key="Settings.Status.AutoUpdateReady" xmlns:sys="clr-namespace:System;assembly=mscorlib">Automatic updates are ready.</sys:String>
     <sys:String x:Key="Settings.Status.UpdateInstallRequired" xmlns:sys="clr-namespace:System;assembly=mscorlib">Updates are available in the installed launcher version.</sys:String>
+    <sys:String x:Key="Nav.rust-clients" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rust clients</sys:String>
+    <sys:String x:Key="Nav.rust-clients.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Install and launch independent Minecraft clients.</sys:String>
+    <sys:String x:Key="Rust.Eyebrow" xmlns:sys="clr-namespace:System;assembly=mscorlib">INDEPENDENT CLIENTS</sys:String>
+    <sys:String x:Key="Rust.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rust clients</sys:String>
+    <sys:String x:Key="Rust.Description" xmlns:sys="clr-namespace:System;assembly=mscorlib">Install and launch standalone Minecraft clients without changing your Java launcher instances.</sys:String>
+    <sys:String x:Key="Rust.Refresh" xmlns:sys="clr-namespace:System;assembly=mscorlib">Refresh</sys:String>
+    <sys:String x:Key="Rust.Release" xmlns:sys="clr-namespace:System;assembly=mscorlib">Client release</sys:String>
+    <sys:String x:Key="Rust.InstanceName" xmlns:sys="clr-namespace:System;assembly=mscorlib">New instance name</sys:String>
+    <sys:String x:Key="Rust.Install" xmlns:sys="clr-namespace:System;assembly=mscorlib">Install</sys:String>
+    <sys:String x:Key="Rust.Releases" xmlns:sys="clr-namespace:System;assembly=mscorlib">Pomme releases</sys:String>
+    <sys:String x:Key="Rust.ReleaseHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Downloads come from the official GitHub release and are verified with SHA-256.</sys:String>
+    <sys:String x:Key="Rust.Instances" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installed instances</sys:String>
+    <sys:String x:Key="Rust.InstanceHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Each instance has its own game data directories.</sys:String>
+    <sys:String x:Key="Rust.RenameHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">New name for the selected instance</sys:String>
+    <sys:String x:Key="Rust.Rename" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rename instance</sys:String>
+    <sys:String x:Key="Rust.Delete" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete instance</sys:String>
+    <sys:String x:Key="Rust.Delete.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete Rust instance?</sys:String>
+    <sys:String x:Key="Rust.Delete.Message" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance “{0}” and its game data will be deleted. The installed Pomme client will remain.</sys:String>
+    <sys:String x:Key="Rust.Username" xmlns:sys="clr-namespace:System;assembly=mscorlib">Player name (optional)</sys:String>
+    <sys:String x:Key="Rust.Play" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launch Pomme</sys:String>
+    <sys:String x:Key="Rust.Cancel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel</sys:String>
+    <sys:String x:Key="Rust.Status.Loading" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading Pomme client and instances…</sys:String>
+    <sys:String x:Key="Rust.Status.NoReleases" xmlns:sys="clr-namespace:System;assembly=mscorlib">No Pomme releases were found.</sys:String>
+    <sys:String x:Key="Rust.Status.Ready" xmlns:sys="clr-namespace:System;assembly=mscorlib">Available releases: {0}. Select a release to install.</sys:String>
+    <sys:String x:Key="Rust.Status.LoadFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not load Pomme: {0}</sys:String>
+    <sys:String x:Key="Rust.Status.Installing" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installing client…</sys:String>
+    <sys:String x:Key="Rust.Status.Downloading" xmlns:sys="clr-namespace:System;assembly=mscorlib">Download: {0}%</sys:String>
+    <sys:String x:Key="Rust.Status.Verifying" xmlns:sys="clr-namespace:System;assembly=mscorlib">Verifying archive SHA-256…</sys:String>
+    <sys:String x:Key="Rust.Status.Extracting" xmlns:sys="clr-namespace:System;assembly=mscorlib">Extracting: {0}</sys:String>
+    <sys:String x:Key="Rust.Status.Registering" xmlns:sys="clr-namespace:System;assembly=mscorlib">Saving installed client…</sys:String>
+    <sys:String x:Key="Rust.Status.Installed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Client installed. Created instance “{0}”.</sys:String>
+    <sys:String x:Key="Rust.Status.Cancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Installation cancelled.</sys:String>
+    <sys:String x:Key="Rust.Status.InstallFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not install client: {0}</sys:String>
+    <sys:String x:Key="Rust.Status.Launched" xmlns:sys="clr-namespace:System;assembly=mscorlib">Pomme started. Process ID: {0}.</sys:String>
+    <sys:String x:Key="Rust.Status.LaunchFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not launch Pomme: {0}</sys:String>
+    <sys:String x:Key="Rust.Status.Renamed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance name saved.</sys:String>
+    <sys:String x:Key="Rust.Status.RenameFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not rename the instance: {0}</sys:String>
+    <sys:String x:Key="Rust.Status.RunningCannotDelete" xmlns:sys="clr-namespace:System;assembly=mscorlib">Close Pomme before deleting this instance.</sys:String>
+    <sys:String x:Key="Rust.Status.Deleted" xmlns:sys="clr-namespace:System;assembly=mscorlib">Instance “{0}” deleted.</sys:String>
+    <sys:String x:Key="Rust.Status.DeleteFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Could not delete the instance: {0}</sys:String>
 </ResourceDictionary>

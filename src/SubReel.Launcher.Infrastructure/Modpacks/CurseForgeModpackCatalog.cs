@@ -10,7 +10,7 @@ public sealed class CurseForgeModpackCatalog(ICurseForgeApiClient api) : IModpac
 
     public async Task<ModpackSearchPage> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default)
     {
-        var result = await api.SearchAsync(query, cancellationToken);
+        var result = await api.SearchAsync(query, cancellationToken, searchMods: false);
         return new ModpackSearchPage(result.Items, result.TotalHits, query.Offset, query.Limit);
     }
 

@@ -3,6 +3,9 @@ using SubReel.Launcher.Abstractions.Modules;
 using SubReel.Launcher.App.Services;
 using SubReel.Launcher.App.ViewModels;
 using SubReel.Launcher.App.DesignSystem;
+using SubReel.Launcher.Rust.Abstractions.Models;
+using SubReel.Launcher.Rust.Abstractions.Services;
+using SubReel.Launcher.Rust.Core.Instances;
 
 namespace SubReel.Launcher.App.Modules;
 
@@ -18,6 +21,13 @@ public sealed class InstancesModule : ILauncherModule
     public string Id => "instances";
     public void ConfigureServices(IServiceCollection services) => services.AddTransient<InstancesViewModel>();
     public IEnumerable<NavItem> GetNavItems() => [new("instances", "Сборки", "instances", "Управление игровыми версиями и сборками Minecraft.", typeof(InstancesViewModel))];
+}
+
+public sealed class RustModule : ILauncherModule
+{
+    public string Id => "rust-clients";
+    public void ConfigureServices(IServiceCollection services) => services.AddTransient<RustClientsViewModel>();
+    public IEnumerable<NavItem> GetNavItems() => [new("rust-clients", "Rust-клиенты", "instances", "Установка и запуск независимых клиентов Minecraft.", typeof(RustClientsViewModel))];
 }
 
 public sealed class ModsModule : ILauncherModule

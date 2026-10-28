@@ -11,6 +11,7 @@ using SubReel.Launcher.Abstractions.Game;
 using SubReel.Launcher.Abstractions.Settings;
 using SubReel.Launcher.App.DesignSystem;
 using SubReel.Launcher.App.Services;
+using SubReel.Launcher.App.Navigation;
 using SubReel.Launcher.Core.Instances;
 using SubReel.Launcher.Core.Launching;
 using SubReel.Launcher.Core.Models;
@@ -70,12 +71,16 @@ public partial class HomeViewModel : ObservableObject
     private readonly InstanceService _instances;
     private readonly ILogger<HomeViewModel> _logger;
     private readonly ILocalizationService _localization;
+    private readonly ILauncherNewsService _news;
+    private readonly INavigationService _navigation;
     private bool _restoringSelection;
     private CancellationTokenSource? _launchCancellation;
 
     public ObservableCollection<MinecraftReleaseFamily> Families { get; } = [];
     public ObservableCollection<MinecraftVersionOption> ExactVersions { get; } = [];
     public ObservableCollection<MinecraftInstance> Instances { get; } = [];
+    public bool HasSelectedInstance => SelectedInstance is not null;
+    public bool HasVersionFamilies => Families.Count > 0;
     public ObservableCollection<GameLoaderOption> LoaderOptions { get; } =
     [
         new GameLoaderOption("Vanilla", "Vanilla", null, true, "Доступно для выбранной версии.")
@@ -92,7 +97,18 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isExpanded;
     [ObservableProperty] private double _launchProgress;
+    [ObservableProperty] private LauncherRelease? _featuredNews;
     public string StatusText => LocalizeHomeStatus(StatusTextRaw);
+    public bool IsSelectedInstanceRunning => SelectedInstance is { } instance &&
+        _launchOrchestrator.ActiveLaunches.Any(status => status.InstanceId == instance.Id && status.State == LaunchState.Running);
+    public bool CanPlay => !IsBusy && !IsSelectedInstanceRunning && !string.IsNullOrWhiteSpace(SelectedVersion);
+    public string HeroTitle => SelectedInstance?.Name ?? SelectedFamily?.Name ?? _localization.Get("Home.HeroFallbackTitle", "Твой мир. Твои правила.");
+    public string HeroSubtitle => SelectedInstance is { } instance
+        ? $"{instance.MinecraftVersion} · {instance.LoaderType} · {instance.MemoryMb} MB"
+        : SelectedFamily?.Tagline ?? _localization.Get("Home.HeroFallbackSubtitle", "Выбери сборку и продолжи приключение.");
+    public Uri? HeroArtUri => SelectedFamily?.ArtUri;
+    public string FeaturedNewsTitle => FeaturedNews?.Title ?? _localization.Get("Home.NewsFallbackTitle", "Обновления SubReel");
+    public string FeaturedNewsDate => FeaturedNews?.DateLabel ?? _localization.Get("Home.NewsFallbackSubtitle", "Открыть ленту новостей");
     public string VersionCatalogStatus => LocalizeHomeStatus(VersionCatalogStatusRaw);
     public string LoaderCatalogStatus => LocalizeHomeStatus(LoaderCatalogStatusRaw);
     public string SelectedFamilyLatestVersionLabel => SelectedFamily is null
@@ -105,6 +121,7 @@ public partial class HomeViewModel : ObservableObject
     partial void OnStatusTextRawChanged(string value) => OnPropertyChanged(nameof(StatusText));
     partial void OnVersionCatalogStatusRawChanged(string value) => OnPropertyChanged(nameof(VersionCatalogStatus));
     partial void OnLoaderCatalogStatusRawChanged(string value) => OnPropertyChanged(nameof(LoaderCatalogStatus));
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanPlay));
 
     private string LocalizeHomeStatus(string text)
     {
@@ -157,7 +174,7 @@ public partial class HomeViewModel : ObservableObject
     private string FormatHomeStatus(string key, string fallback, params object[] args) =>
         string.Format(_localization.Culture, _localization.Get(key, fallback), args);
 
-    public HomeViewModel(IGameVersionCatalog catalog, IGameLoaderCatalog loaderCatalog, ILaunchOrchestrator launchOrchestrator, IGameAuthService auth, IThemeService theme, ISettingsService settings, InstanceService instances, ILogger<HomeViewModel> logger, ILocalizationService localization)
+    public HomeViewModel(IGameVersionCatalog catalog, IGameLoaderCatalog loaderCatalog, ILaunchOrchestrator launchOrchestrator, IGameAuthService auth, IThemeService theme, ISettingsService settings, InstanceService instances, ILogger<HomeViewModel> logger, ILocalizationService localization, ILauncherNewsService news, INavigationService navigation)
     {
         _catalog = catalog;
         _loaderCatalog = loaderCatalog;
@@ -168,6 +185,20 @@ public partial class HomeViewModel : ObservableObject
         _instances = instances;
         _logger = logger;
         _localization = localization;
+        _news = news;
+        _navigation = navigation;
+        Families.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasVersionFamilies));
+        var orchestrator = launchOrchestrator;
+        var weakViewModel = new WeakReference<HomeViewModel>(this);
+        Action<LaunchStatus> statusHandler = null!;
+        statusHandler = status =>
+        {
+            if (weakViewModel.TryGetTarget(out var viewModel))
+                viewModel.OnLaunchStatusChanged(status);
+            else if (statusHandler is not null)
+                orchestrator.StatusChanged -= statusHandler;
+        };
+        orchestrator.StatusChanged += statusHandler;
         _localization.LanguageChanged += (_, _) =>
         {
             foreach (var family in Families)
@@ -177,14 +208,22 @@ public partial class HomeViewModel : ObservableObject
             OnPropertyChanged(nameof(LoaderCatalogStatus));
             OnPropertyChanged(nameof(SelectedVersionSummary));
             OnPropertyChanged(nameof(SelectedFamilyLatestVersionLabel));
+            OnPropertyChanged(nameof(HeroTitle));
+            OnPropertyChanged(nameof(HeroSubtitle));
+            OnPropertyChanged(nameof(FeaturedNewsTitle));
+            OnPropertyChanged(nameof(FeaturedNewsDate));
             UpdateManifestStatus();
         };
         _ = LoadVersionsAsync();
+        _ = LoadFeaturedNewsAsync();
     }
 
     partial void OnSelectedFamilyChanged(MinecraftReleaseFamily? value)
     {
         OnPropertyChanged(nameof(SelectedFamilyLatestVersionLabel));
+        OnPropertyChanged(nameof(HeroTitle));
+        OnPropertyChanged(nameof(HeroSubtitle));
+        OnPropertyChanged(nameof(HeroArtUri));
         ExactVersions.Clear();
         if (value is not null)
         {
@@ -200,6 +239,7 @@ public partial class HomeViewModel : ObservableObject
 
     partial void OnSelectedVersionChanged(string value)
     {
+        OnPropertyChanged(nameof(CanPlay));
         if (!_restoringSelection && SelectedInstance is not null &&
             !string.Equals(SelectedInstance.MinecraftVersion, value, StringComparison.OrdinalIgnoreCase))
             SelectedInstance = null;
@@ -219,6 +259,11 @@ public partial class HomeViewModel : ObservableObject
 
     partial void OnSelectedInstanceChanged(MinecraftInstance? value)
     {
+        OnPropertyChanged(nameof(HasSelectedInstance));
+        OnPropertyChanged(nameof(IsSelectedInstanceRunning));
+        OnPropertyChanged(nameof(CanPlay));
+        OnPropertyChanged(nameof(HeroTitle));
+        OnPropertyChanged(nameof(HeroSubtitle));
         if (value is null) return;
 
         var wasRestoringSelection = _restoringSelection;
@@ -240,6 +285,50 @@ public partial class HomeViewModel : ObservableObject
         }
 
         _ = LoadLoaderOptionsAsync(value.MinecraftVersion);
+    }
+
+    partial void OnFeaturedNewsChanged(LauncherRelease? value)
+    {
+        OnPropertyChanged(nameof(FeaturedNewsTitle));
+        OnPropertyChanged(nameof(FeaturedNewsDate));
+    }
+
+    private async Task LoadFeaturedNewsAsync()
+    {
+        if (!_news.IsConfigured) return;
+        try
+        {
+            var items = await _news.GetLatestAsync();
+            FeaturedNews = items.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Home news teaser is unavailable; the main page remains usable");
+        }
+    }
+
+    [RelayCommand]
+    private void OpenNews() => _navigation.NavigateTo("news");
+
+    [RelayCommand]
+    private void OpenInstances() => _navigation.NavigateTo("instances");
+
+    [RelayCommand]
+    private void OpenVersionPicker()
+    {
+        if (SelectedFamily is not null) SelectFamily(SelectedFamily);
+    }
+
+    private void OnLaunchStatusChanged(LaunchStatus status)
+    {
+        if (SelectedInstance?.Id != status.InstanceId) return;
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null) return;
+        _ = dispatcher.BeginInvoke(new Action(() =>
+        {
+            OnPropertyChanged(nameof(IsSelectedInstanceRunning));
+            OnPropertyChanged(nameof(CanPlay));
+        }));
     }
 
     private void UpdateManifestStatus()

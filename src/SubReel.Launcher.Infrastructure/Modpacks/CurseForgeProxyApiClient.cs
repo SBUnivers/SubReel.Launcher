@@ -10,11 +10,13 @@ public sealed class CurseForgeProxyApiClient(HttpClient http, ILauncherSessionPr
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task<CurseForgeSearchResults> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default)
+    public async Task<CurseForgeSearchResults> SearchAsync(ModpackQuery query, CancellationToken cancellationToken = default,
+        bool searchMods = false)
     {
         var parameters = new Dictionary<string, string?>
         {
             ["action"] = "search", ["query"] = query.Query, ["gameVersion"] = query.MinecraftVersion,
+            ["type"] = searchMods ? "mod" : "modpack",
             ["loader"] = query.Loader, ["offset"] = query.Offset.ToString(), ["limit"] = query.Limit.ToString()
         };
         using var document = await SendJsonAsync(HttpMethod.Get, BuildPath(parameters), null, cancellationToken);
@@ -169,10 +171,15 @@ public sealed class CurseForgeProxyApiClient(HttpClient http, ILauncherSessionPr
         var gameVersions = file.TryGetProperty("gameVersions", out var gameArray) && gameArray.ValueKind == JsonValueKind.Array
             ? gameArray.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToArray()
             : [];
+        var dependencies = file.TryGetProperty("dependencies", out var dependencyArray) && dependencyArray.ValueKind == JsonValueKind.Array
+            ? dependencyArray.EnumerateArray().Select(x => new CurseForgeFileDependency(ReadInt(x, "modId"), ReadInt(x, "fileId"), ReadInt(x, "relationType")))
+                .Where(x => x.ModId > 0).ToArray()
+            : [];
         return new CurseForgeModpackFile(ReadInt(file, "id"), ReadInt(file, "modId"), ReadString(file, "displayName"),
             ReadString(file, "fileName"), ReadNullableString(file, "downloadUrl"), ReadLong(file, "fileLength"), hashes,
             gameVersions, !file.TryGetProperty("isAvailable", out var available) || available.ValueKind != JsonValueKind.False)
         {
+            Dependencies = dependencies,
             PublishedAt = DateTimeOffset.TryParse(ReadNullableString(file, "fileDate"), System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.AssumeUniversal, out var publishedAt) ? publishedAt : null
         };

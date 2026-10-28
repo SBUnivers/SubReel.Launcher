@@ -23,6 +23,9 @@
             <DataTemplate DataType="{x:Type vm:InstancesViewModel}">
                 <views:InstancesView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:RustClientsViewModel}">
+                <views:RustClientsView/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:ModsCatalogViewModel}">
                 <views:ModsCatalogView/>
             </DataTemplate>

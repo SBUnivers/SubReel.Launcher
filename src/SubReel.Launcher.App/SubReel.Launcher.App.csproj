@@ -5,6 +5,9 @@
     <ProjectReference Include="..\SubReel.Launcher.Auth\SubReel.Launcher.Auth.csproj" />
     <ProjectReference Include="..\SubReel.Launcher.Core\SubReel.Launcher.Core.csproj" />
     <ProjectReference Include="..\SubReel.Launcher.Infrastructure\SubReel.Launcher.Infrastructure.csproj" />
+    <ProjectReference Include="..\SubReel.Launcher.Rust.Abstractions\SubReel.Launcher.Rust.Abstractions.csproj" />
+    <ProjectReference Include="..\SubReel.Launcher.Rust.Core\SubReel.Launcher.Rust.Core.csproj" />
+    <ProjectReference Include="..\SubReel.Launcher.Rust.Infrastructure\SubReel.Launcher.Rust.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,6 +6,7 @@
 .idea/
 .vscode/
 *.zip
+/artifacts/
 
 # User-specific files
 *.user
