@@ -1,10 +1,8 @@
-using SubReel.Launcher.Abstractions.Game;
-
 namespace SubReel.Launcher.Auth.Supabase;
 
 public interface ISupabaseGameProfileService
 {
-    Task<LinkedGameProfile?> GetLinkedProfileAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LinkedGameProfile>> GetLinkedProfilesAsync(CancellationToken cancellationToken = default);
     Task<LinkedGameProfile> LinkCurrentMicrosoftProfileAsync(CancellationToken cancellationToken = default);
-    Task UnlinkProfileAsync(CancellationToken cancellationToken = default);
+    Task UnlinkProfileAsync(string minecraftUuid, CancellationToken cancellationToken = default);
 }
