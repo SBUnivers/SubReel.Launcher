@@ -355,7 +355,6 @@
     <sys:String x:Key="Instances.Status.Ready" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ready</sys:String>
     <sys:String x:Key="Instances.Status.Loading" xmlns:sys="clr-namespace:System;assembly=mscorlib">Loading instances…</sys:String>
     <sys:String x:Key="Instances.Status.Creating" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating instance…</sys:String>
-    <sys:String x:Key="Instances.Status.Duplicating" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating clean copy…</sys:String>
     <sys:String x:Key="Instances.Status.PreparingGame" xmlns:sys="clr-namespace:System;assembly=mscorlib">Preparing Minecraft…</sys:String>
     <sys:String x:Key="Instances.Status.LaunchCancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Launch cancelled.</sys:String>
     <sys:String x:Key="Instances.Status.ReadingManifest" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reading modpack manifest…</sys:String>

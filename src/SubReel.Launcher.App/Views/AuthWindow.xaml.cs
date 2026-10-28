@@ -43,6 +43,7 @@ public partial class AuthWindow : Window
         _localization.LanguageChanged += OnLanguageChanged;
         Closed += (_, _) => _localization.LanguageChanged -= OnLanguageChanged;
         GameAccountBox.ItemsSource = _accounts;
+        LinkedProfilesList.SelectionChanged += (_, _) => UnlinkButton.IsEnabled = LinkedProfilesList.SelectedItem is LinkedGameProfile && _platformSignedIn && !_busy;
         if (!_subReelAuth.IsConfigured)
             StatusText.Text = T("Auth.Status.SupabaseNotConfigured", "Supabase не настроен. Заполни Platform:SupabaseUrl и Platform:SupabasePublishableKey в appsettings.json.");
         else if (_subReelAuth.CurrentSession is { } session)
@@ -297,27 +298,13 @@ public partial class AuthWindow : Window
         SetBusy(true);
         try
         {
-            var existing = await _gameProfileService.GetLinkedProfileAsync();
-            var current = _gameAuth.ActiveAccount;
-            if (existing is not null && current is not null &&
-                !string.Equals(existing.MinecraftUuid, current.Uuid, StringComparison.OrdinalIgnoreCase))
-            {
-                var replace = MessageBox.Show(
-                    string.Format(_localization.Culture, T("Auth.Confirm.ReplaceLink", "К этому аккаунту SubReel уже привязан профиль {0}.\n\nЗаменить его на {1}?"), existing.MinecraftUsername, current.Username),
-                    T("Auth.Confirm.ReplaceLinkTitle", "Заменить привязанный профиль"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                if (replace != MessageBoxResult.Yes)
-                {
-                    StatusText.Text = T("Auth.Status.LinkUnchanged", "Привязка не изменена.");
-                    return;
-                }
-            }
-
             var linked = await _gameProfileService.LinkCurrentMicrosoftProfileAsync();
-            GameProfileText.Text = string.Format(_localization.Culture, T("Auth.Status.LinkedProfile", "Привязан: {0}\nUUID: {1}\nСтатус: Microsoft / Minecraft Java"), linked.MinecraftUsername, linked.MinecraftUuid);
-            StatusText.Text = T("Auth.Status.ProfileLinked", "Игровой профиль привязан к текущему аккаунту SubReel. Игровые токены не передавались в Supabase.");
+            await RefreshLinkedProfileAsync(showStatus: false);
+            LinkedProfilesList.SelectedItem = LinkedProfilesList.Items.Cast<LinkedGameProfile>()
+                .FirstOrDefault(profile => string.Equals(profile.MinecraftUuid, linked.MinecraftUuid, StringComparison.OrdinalIgnoreCase));
+            GameProfileText.Text = string.Format(_localization.Culture,
+                T("Auth.Status.ProfileLinked", "Профиль {0} привязан к аккаунту SubReel."), linked.MinecraftUsername);
             StatusText.Foreground = System.Windows.Media.Brushes.LightGreen;
-            _hasLinkedProfile = true;
-            UnlinkButton.IsEnabled = true;
         }
         catch (Exception ex) { StatusText.Text = ex.Message; StatusText.Foreground = System.Windows.Media.Brushes.Salmon; }
         finally { SetBusy(false); UpdateAuthButtons(); }
@@ -326,20 +313,26 @@ public partial class AuthWindow : Window
     private async void Unlink_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        var answer = MessageBox.Show(T("Auth.Confirm.Unlink", "Отвязать игровой профиль от аккаунта SubReel? Игровой аккаунт Minecraft останется в лаунчере."), T("Auth.Confirm.UnlinkTitle", "Отвязать профиль"), MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (LinkedProfilesList.SelectedItem is not LinkedGameProfile selected)
+        {
+            StatusText.Text = "Сначала выбери профиль Minecraft, который нужно отвязать.";
+            StatusText.Foreground = System.Windows.Media.Brushes.Salmon;
+            return;
+        }
+        var answer = MessageBox.Show(
+            string.Format(_localization.Culture, "Отвязать профиль {0} от аккаунта SubReel? Игровой аккаунт Minecraft останется в лаунчере.", selected.MinecraftUsername),
+            T("Auth.Confirm.UnlinkTitle", "Отвязать профиль"), MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer != MessageBoxResult.Yes) return;
         SetBusy(true);
         try
         {
-            await _gameProfileService.UnlinkProfileAsync();
-            _hasLinkedProfile = false;
-            GameProfileText.Text = T("Auth.Status.ProfileNotLinked", "Игровой профиль не привязан.");
+            await _gameProfileService.UnlinkProfileAsync(selected.MinecraftUuid);
+            await RefreshLinkedProfileAsync(showStatus: false);
             StatusText.Text = T("Auth.Status.ProfileUnlinked", "Привязка удалена. Игровой аккаунт Minecraft не изменён.");
             StatusText.Foreground = System.Windows.Media.Brushes.LightGreen;
-            UnlinkButton.IsEnabled = false;
         }
-        catch (Exception ex) { StatusText.Text = ex.Message; }
-        finally { SetBusy(false); }
+        catch (Exception ex) { StatusText.Text = ex.Message; StatusText.Foreground = System.Windows.Media.Brushes.Salmon; }
+        finally { SetBusy(false); UpdateAuthButtons(); }
     }
 
     private async Task RefreshLinkedProfileAsync(bool showStatus, CancellationToken cancellationToken = default)
@@ -347,34 +340,39 @@ public partial class AuthWindow : Window
         if (_subReelAuth.CurrentSession is null)
         {
             _hasLinkedProfile = false;
+            LinkedProfilesList.ItemsSource = null;
+            GameProfileText.Text = T("Auth.Status.GameAccountUnchangedSignIn", "Игровой аккаунт не изменён. Войди в SubReel, чтобы управлять привязкой.");
             LinkButton.IsEnabled = false;
             UnlinkButton.IsEnabled = false;
             return;
         }
         try
         {
-            var profile = await _gameProfileService.GetLinkedProfileAsync(cancellationToken);
-            if (profile is null)
-            {
-                _hasLinkedProfile = false;
-                GameProfileText.Text = T("Auth.Status.ProfileNotLinkedToAccount", "Игровой профиль не привязан к этому аккаунту SubReel.");
-                UnlinkButton.IsEnabled = false;
-            }
-            else
-            {
-                _hasLinkedProfile = true;
-                GameProfileText.Text = string.Format(_localization.Culture, T("Auth.Status.LinkedProfileShort", "Привязан: {0} ({1})"), profile.MinecraftUsername, profile.MinecraftUuid);
-                UnlinkButton.IsEnabled = true;
-            }
+            var previouslySelectedUuid = (LinkedProfilesList.SelectedItem as LinkedGameProfile)?.MinecraftUuid;
+            var profiles = await _gameProfileService.GetLinkedProfilesAsync(cancellationToken);
+            LinkedProfilesList.ItemsSource = profiles;
+            _hasLinkedProfile = profiles.Count > 0;
+            if (!string.IsNullOrWhiteSpace(previouslySelectedUuid))
+                LinkedProfilesList.SelectedItem = profiles.FirstOrDefault(profile =>
+                    string.Equals(profile.MinecraftUuid, previouslySelectedUuid, StringComparison.OrdinalIgnoreCase));
+            if (LinkedProfilesList.SelectedItem is null && profiles.Count > 0)
+                LinkedProfilesList.SelectedIndex = 0;
+
+            GameProfileText.Text = profiles.Count == 0
+                ? T("Auth.Status.ProfileNotLinkedToAccount", "К аккаунту SubReel пока не привязан ни один игровой профиль.")
+                : string.Format(_localization.Culture, "Привязано профилей: {0}. Выбери профиль ниже, чтобы отвязать его.", profiles.Count);
+            UnlinkButton.IsEnabled = LinkedProfilesList.SelectedItem is LinkedGameProfile;
             LinkButton.IsEnabled = _gameAuth.ActiveAccount?.Type == LauncherAccountType.Microsoft;
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            if (ex.Message.Contains("launcher_game_profiles", StringComparison.OrdinalIgnoreCase))
-                StatusText.Text = T("Auth.Status.ProfileMigrationRequired", "Для привязки профиля нужна миграция supabase/sql/032_launcher_game_profiles.sql из subreel-platform.");
-            else if (showStatus) StatusText.Text = ex.Message;
-            else GameProfileText.Text = string.Format(_localization.Culture, T("Auth.Status.ProfileCheckFailed", "Не удалось проверить привязку: {0}"), ex.Message);
+            LinkedProfilesList.ItemsSource = null;
+            _hasLinkedProfile = false;
+            UnlinkButton.IsEnabled = false;
+            if (showStatus) StatusText.Text = ex.Message;
+            else GameProfileText.Text = string.Format(_localization.Culture,
+                T("Auth.Status.ProfileCheckFailed", "Не удалось проверить привязки: {0}"), ex.Message);
             LinkButton.IsEnabled = _gameAuth.ActiveAccount?.Type == LauncherAccountType.Microsoft;
         }
     }
@@ -450,7 +448,7 @@ public partial class AuthWindow : Window
         LicenseCheckButton.IsEnabled = !_busy;
         BuyMinecraftButton.IsEnabled = !_busy;
         OfflineButton.IsEnabled = !_busy;
-        UnlinkButton.IsEnabled = !_busy && signedIn && _hasLinkedProfile;
+        UnlinkButton.IsEnabled = !_busy && signedIn && LinkedProfilesList.SelectedItem is LinkedGameProfile;
     }
 
 

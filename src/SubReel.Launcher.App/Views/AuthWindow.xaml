@@ -133,7 +133,19 @@
                                 <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16">
                                     <StackPanel>
                                         <TextBlock Text="{DynamicResource Auth.ProfileLink}" FontSize="{design:ScaledFontSize 10}" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
-                                        <TextBlock x:Name="GameProfileText" Text="{DynamicResource Auth.NoGameProfile}" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" Margin="0,8,0,14"/>
+                                        <TextBlock x:Name="GameProfileText" Text="{DynamicResource Auth.NoGameProfile}" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" Margin="0,8,0,8"/>
+                                        <ListBox x:Name="LinkedProfilesList" MinHeight="48" MaxHeight="130" Margin="0,0,0,12"
+                                                 Background="{StaticResource CardRaisedBackground}" Foreground="{DynamicResource TextPrimary}"
+                                                 BorderBrush="{DynamicResource BorderBrush}" SelectionMode="Single">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Margin="3">
+                                                        <TextBlock Text="{Binding MinecraftUsername}" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding MinecraftUuid}" FontSize="{design:ScaledFontSize 10}" Foreground="{StaticResource Muted}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
                                         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                             <Button x:Name="LinkButton" Content="{DynamicResource Auth.LinkProfile}" Click="Link_Click" Background="{StaticResource Accent}" Foreground="{DynamicResource AccentTextBrush}" BorderThickness="0" Margin="0,0,5,0"/>
                                             <Button x:Name="UnlinkButton" Grid.Column="1" Content="{DynamicResource Auth.UnlinkProfile}" Click="Unlink_Click" Margin="5,0,0,0" IsEnabled="False"/>

@@ -356,7 +356,6 @@
     <sys:String x:Key="Instances.Status.Ready">Готово</sys:String>
     <sys:String x:Key="Instances.Status.Loading">Загрузка сборок…</sys:String>
     <sys:String x:Key="Instances.Status.Creating">Создание сборки…</sys:String>
-    <sys:String x:Key="Instances.Status.Duplicating">Создание чистой копии…</sys:String>
     <sys:String x:Key="Instances.Status.PreparingGame">Подготовка Minecraft…</sys:String>
     <sys:String x:Key="Instances.Status.LaunchCancelled">Запуск отменён.</sys:String>
     <sys:String x:Key="Instances.Status.ReadingManifest">Читаю манифест модпака…</sys:String>
